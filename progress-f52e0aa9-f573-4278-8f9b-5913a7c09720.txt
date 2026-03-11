@@ -1,0 +1,145 @@
+# Progress Log
+Run: f52e0aa9-f573-4278-8f9b-5913a7c09720
+Task: Ayakkabi tanima one-page web uygulamasi olustur
+Started: 2026-03-11
+
+## Codebase Patterns
+- Pure HTML/CSS/Vanilla JS project — no build tool, no package.json, open index.html directly in browser
+- Tests use Node.js ESM (import/export), run with: node tests/<test-name>.js
+- Git commits: `git -c user.email="developer@openclaw" -c user.name="Developer" commit -m "..."`
+- No .env or secrets — API key stored in browser localStorage only
+- Module-level state variables (selectedFile) declared outside DOMContentLoaded, handlers inside
+- DOMContentLoaded wraps all DOM manipulation; module-level variables declared above it
+- Test files parse source files as strings (readFileSync + regex) — no DOM/browser runtime needed
+- CSS `.drag-over` class applied via JS; styled in CSS with `#drop-zone:hover, #drop-zone.drag-over { ... }`
+- Hidden `<input type="file">` + `fileInput.click()` pattern for programmatic file picker trigger
+- FileReader + readAsDataURL for image preview before upload
+- Loading state functions (showLoading/hideLoading) defined at module level (before DOMContentLoaded) so they can reference DOM via getElementById at call time — they do NOT cache DOM refs at module scope
+- Use `style="display:none"` (inline style) for initially-hidden sections that JS will toggle via .style.display = 'flex' — avoids [hidden] attribute conflict since [hidden] uses display:none !important
+- try/finally pattern for API calls: showLoading() before fetch, hideLoading() in finally block
+- Module-level helper functions (displayResults, showLoading, hideLoading, showError, hideError) use getElementById at call time, NOT cached at module scope
+- Result card uses `.result-card` class (not ID) so it can be reused; section uses `#result-section` ID for JS targeting
+- `style.display` toggling (not `hidden` attribute) for sections controlled by JS — consistent approach throughout
+- Error handling pattern: throw custom errors with `err.status = response.status` and `err.isJsonError = true` flags so catch blocks can map to Turkish messages without string matching
+- app.js is a plain (non-module) script → module-level functions are on `window`, so HTML onclick="hideError()" works
+- Turkish error messages defined as module-level constants (ERR_NO_FILE, ERR_NO_API_KEY, etc.) for testability
+- Dismiss buttons in error sections use `onclick="hideError()"` attribute (works since app.js is non-module global script)
+- Collapsible HTML sections: use native `<details>`/`<summary>` pattern — no JS needed, CSS `[open]` selector for arrow rotation
+- Mobile responsive: add `min-height` + `display:flex; align-items:center` to drop zone, `padding: 16px` to result card, `width:100%` to all button classes
+- Integration test pattern: single test file reads all source files as strings, asserts structural requirements across HTML/JS/CSS in one pass
+
+---
+
+## 2026-03-11 - US-001: Project setup and HTML skeleton
+- Initialized git repo at /Users/ataknkcyn/Desktop/ayakkabi-tanirim
+- Created branch: feature/ayakkabi-tanirim-app
+- Created index.html with: DOCTYPE, lang="tr", charset UTF-8, viewport meta, title, <header>, <main> (#upload-section, #result-section), <footer>
+- Created placeholder styles.css and app.js
+- Created README.md with usage instructions
+- Created tests/smoke-test.js — 11 structural assertions, all passing
+- Created .gitignore (.DS_Store, *.log)
+- Committed: feat: US-001 - Project setup and HTML skeleton (5ba26b6)
+- **Learnings:** Project is purely static — no Node modules, no build step, tests are standalone Node ESM scripts
+
+---
+
+## 2026-03-11 - US-004: Drag & drop and file picker upload zone
+- Updated index.html: changed drop zone text to "Ayakkabı fotoğrafını buraya sürükle veya", changed `<label>` to `<button id="select-btn">` for the file picker trigger
+- Added module-level `let selectedFile = null` to app.js (above DOMContentLoaded)
+- Added drag & drop event handlers to app.js:
+  - `dragover`: calls preventDefault(), adds `.drag-over` class
+  - `dragleave`: removes `.drag-over` class (checks relatedTarget to avoid flicker)
+  - `drop`: calls preventDefault(), removes `.drag-over`, calls handleFile(file)
+- Added `handleFile(file)` function: validates image/* type, shows Turkish error, sets selectedFile, shows preview via FileReader
+- Added click handlers: drop zone click → fileInput.click(), select button click → fileInput.click() (stopPropagation to avoid double trigger)
+- Added fileInput change handler: calls handleFile, resets fileInput.value for re-select
+- Created tests/upload-test.js — 19 assertions covering app.js, index.html, styles.css; all passing
+- Committed: feat: US-004 - Drag & drop and file picker upload zone (8982960)
+- **Learnings:**
+  - Use `e.stopPropagation()` on inner button to prevent double-trigger with parent drop zone click
+  - Use `dragleave` with `relatedTarget` check to avoid flicker when hovering child elements
+  - Reset `fileInput.value = ''` after handling so same file can be re-selected
+  - Test files use readFileSync + regex — works without browser runtime
+
+---
+
+## 2026-03-11 - US-007: Loading animation during API call
+- Added `<section id="loading-section" style="display:none">` to index.html between upload-section and result-section
+  - Contains `.spinner` div and `<p id="loading-text">Ayakkabı analiz ediliyor...</p>`
+- Added to styles.css:
+  - `@keyframes pulse` (opacity 1 → 0.4 → 1 over 1.6s) for pulsing text
+  - `#loading-section` styles: flex column, centered, min-height: 40vh
+  - `#loading-text` with pulse animation
+- Added to app.js (module level, before DOMContentLoaded):
+  - `showLoading()` with JSDoc: sets #loading-section to display:flex, hides #result-section, disables #analyze-btn, changes btn text to 'Analiz ediliyor...'
+  - `hideLoading()` with JSDoc: sets #loading-section to display:none, re-enables #analyze-btn, restores btn text to '🔍 Analiz Et'
+- Updated analyzeBtn click handler: calls showLoading() before fetch, hideLoading() in finally block
+- Created tests/loading-test.js — 20 assertions covering HTML, CSS, JS; all passing
+- Committed: feat: US-007 - Loading animation during API call (c9d8c0b)
+- **Learnings:**
+  - showLoading/hideLoading defined at module level but use getElementById at call time — safe because DOMContentLoaded fires before user can click
+  - `style="display:none"` better than `hidden` attribute for sections toggled by JS via .style.display (avoids !important conflict)
+  - try/finally is the correct pattern to ensure hideLoading always runs regardless of API success/failure
+
+---
+
+## 2026-03-11 - US-008: Results card display with shoe recognition details
+- Rewrote `#result-section` in index.html:
+  - Changed from `hidden` attribute to `style="display:none"` for JS toggle compatibility
+  - New `.result-card` div with heading 'Analiz Sonuçları'
+  - 5 result rows with icons: 🏷️ Marka, 👟 Model, 🎨 Renk, 📋 Tip, 💰 Tahmini Fiyat Aralığı
+  - New IDs: `result-marka`, `result-model`, `result-renk`, `result-tip`, `result-fiyatAraligi`
+  - 'Yeni Analiz' button (`id="new-analysis-btn"`) at bottom
+- Added `displayResults(data)` to app.js (module level, before DOMContentLoaded)
+- Created tests/results-test.js — 33 assertions; all passing
+- Committed: feat: US-008 - Results card display with shoe recognition details (c82c707)
+
+---
+
+## 2026-03-11 - US-009: Turkish error handling for all failure cases
+- Added `<section id="error-section" style="display:none">` to index.html (before #loading-section)
+- Added CSS for `.error-card` in styles.css: red border, red-tinted background, dismiss button
+- Added to app.js (module level):
+  - 7 Turkish error message constants: ERR_NO_FILE, ERR_NO_API_KEY, ERR_UNAUTHORIZED, ERR_RATE_LIMIT, ERR_SERVER, ERR_NETWORK, ERR_JSON
+  - `showError(message)` and `hideError()` with JSDoc
+- Updated catch block in analyzeBtn handler to map HTTP status codes to Turkish messages
+- Created tests/error-test.js — 27 assertions; all passing
+- Committed: feat: US-009 - Turkish error handling for all failure cases (418397c)
+- **Learnings:**
+  - app.js is loaded as `<script src="app.js">` (non-module), so module-level functions are global — `onclick="hideError()"` in HTML works
+  - Custom error properties (`err.status`, `err.isJsonError`) are cleaner than string matching for catch block routing
+
+---
+
+## 2026-03-11 - US-010: Mobile responsive polish, code comments, and final integration
+- Updated styles.css @media (max-width: 640px) block:
+  - `#drop-zone`: added `min-height: 150px`, `display: flex`, `align-items: center`, `justify-content: center`
+  - `.result-card`: changed padding to `16px`
+  - `.btn-upload`, `.btn-primary`, `.btn-secondary`, `.btn-save`: all set to `width: 100%` on mobile
+  - `.preview-actions`: `flex-direction: column` for stacked buttons on mobile
+  - `.api-key-row`: `flex-wrap: wrap` with `flex: 1 1 100%` on input
+- Added `#how-to-section` with `<details id="how-to-details">` collapsible to index.html (before upload-section):
+  - Turkish summary: "❓ Nasıl Kullanılır?"
+  - 6 numbered `<li>` steps in Turkish covering API key → file select → preview → analyze → results → new analysis
+- Added CSS for `#how-to-details` / `#how-to-section`:
+  - `<summary>` with custom `▶` arrow via `::before`, rotates 90° when `[open]`
+  - `.how-to-content ol` with flex column gap and muted text
+- All app.js functions already had complete Turkish JSDoc comments (no changes needed)
+- Created tests/integration-test.js — 49 assertions covering:
+  - All 5 required section IDs in index.html
+  - "Nasıl Kullanılır?" collapsible section structure
+  - All 9 required functions in app.js
+  - Turkish JSDoc presence for 7 key functions
+  - All 10 CSS variables
+  - @keyframes spin and pulse
+  - Mobile @media block with min-height, padding, button width, typography
+  - General checks: lang="tr", model name, CORS header, localStorage, try/finally
+- All tests pass: integration-test 49/49, + all 9 individual tests
+- Committed: feat: US-010 - Mobile responsive polish, code comments, and final integration (efdb1d7)
+- **Learnings:**
+  - `<details>`/`<summary>` native HTML is zero-JS collapsible; `[open]` attribute selector enables CSS-only open state styling
+  - Integration test as single file covering HTML+JS+CSS structural checks is efficient for static projects
+  - Mobile drop zone needs both `min-height` AND `display:flex` + `align-items:center` to look centered at min-height
+  - Naming CSS section comments with sequential numbers (18, 19...) helps keep track of additions
+
+---

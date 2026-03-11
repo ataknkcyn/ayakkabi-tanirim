@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ayakkabı Tanıma Uygulaması</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Sayfa Başlığı -->
+  <header>
+    <div class="header-inner">
+      <h1>👟 Ayakkabı Tanıma</h1>
+      <p class="subtitle">Fotoğraf yükle, yapay zeka ile tanı</p>
+    </div>
+  </header>
+
+  <!-- Ana İçerik -->
+  <main>
+
+    <!-- Nasıl Kullanılır? Açılır Bölüm -->
+    <section id="how-to-section">
+      <details id="how-to-details">
+        <summary>❓ Nasıl Kullanılır?</summary>
+        <div class="how-to-content">
+          <ol>
+            <li><strong>API Anahtarı Girin:</strong> Anthropic platformundan aldığınız Claude API anahtarını üstteki alana yapıştırın ve <em>Kaydet</em>'e tıklayın. Anahtar tarayıcınıza güvenli şekilde kaydedilir.</li>
+            <li><strong>Fotoğraf Seçin:</strong> Ayakkabı fotoğrafını sürükleyip bırakma alanına bırakın ya da <em>Dosya Seç</em> butonuna tıklayarak bilgisayarınızdan seçin.</li>
+            <li><strong>Önizlemeyi Kontrol Edin:</strong> Seçilen fotoğraf ekranda görünecektir. Fotoğrafı değiştirmek isterseniz <em>Değiştir</em>'e tıklayın.</li>
+            <li><strong>Analiz Edin:</strong> <em>🔍 Analiz Et</em> butonuna tıklayın. Yapay zeka ayakkabıyı tanımak için Claude API'ye istek gönderir.</li>
+            <li><strong>Sonuçları İnceleyin:</strong> Marka, model, renk, tip ve tahmini fiyat aralığı sonuç kartında görüntülenecektir.</li>
+            <li><strong>Yeni Analiz:</strong> Başka bir ayakkabı analiz etmek için <em>🔄 Yeni Analiz</em> butonuna tıklayın.</li>
+          </ol>
+        </div>
+      </details>
+    </section>
+
+    <!-- Fotoğraf Yükleme Bölümü -->
+    <section id="upload-section">
+      <!-- API Key Girişi -->
+      <div id="api-key-section">
+        <label for="api-key-input">Claude API Anahtarı</label>
+        <div class="api-key-row">
+          <input
+            type="password"
+            id="api-key-input"
+            placeholder="Claude API anahtarınızı girin"
+            autocomplete="off"
+          >
+          <button type="button" id="api-key-toggle" class="btn-icon" aria-label="Göster/Gizle">Göster</button>
+          <button type="button" id="api-key-save" class="btn-save">Kaydet</button>
+        </div>
+        <p id="api-key-saved-msg" class="api-key-saved" hidden>API anahtarı kaydedildi ✓</p>
+      </div>
+
+      <!-- Sürükle & Bırak Alanı -->
+      <div id="drop-zone">
+        <div class="drop-zone-inner">
+          <span class="drop-icon">📁</span>
+          <p>Ayakkabı fotoğrafını buraya sürükle veya</p>
+          <button type="button" id="select-btn" class="btn-upload">Dosya Seç</button>
+          <input type="file" id="file-input" accept="image/*" hidden>
+        </div>
+      </div>
+
+      <!-- Seçilen Fotoğraf Önizlemesi -->
+      <div id="preview-section" hidden>
+        <img id="preview-image" src="" alt="Seçilen ayakkabı fotoğrafı">
+        <p id="file-name" class="file-name-text"></p>
+        <div class="preview-actions">
+          <button type="button" id="change-btn" class="btn-secondary">🔄 Değiştir</button>
+          <button type="button" id="analyze-btn" class="btn-primary" disabled>🔍 Analiz Et</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Hata Bölümü (başlangıçta gizli, showError() ile açılır) -->
+    <section id="error-section" style="display:none">
+      <div class="error-card">
+        <button type="button" id="error-dismiss-btn" class="error-dismiss" onclick="hideError()" aria-label="Kapat">✕</button>
+        <span class="error-icon">⚠️</span>
+        <p id="error-message"></p>
+      </div>
+    </section>
+
+    <!-- Yükleme Animasyonu Bölümü (API isteği sırasında görünür) -->
+    <section id="loading-section" style="display:none">
+      <div id="loading-spinner" class="spinner"></div>
+      <p id="loading-text">Ayakkabı analiz ediliyor...</p>
+    </section>
+
+    <!-- Sonuç Bölümü (başlangıçta gizli, displayResults() ile açılır) -->
+    <section id="result-section" style="display:none">
+
+      <!-- Sonuç Kartı -->
+      <div class="result-card">
+        <h2>Analiz Sonuçları</h2>
+
+        <!-- Sonuç satırları: ikon + etiket + değer -->
+        <div class="result-rows">
+
+          <div class="result-row">
+            <span class="result-label">🏷️ Marka</span>
+            <span id="result-marka" class="result-value"></span>
+          </div>
+
+          <div class="result-row">
+            <span class="result-label">👟 Model</span>
+            <span id="result-model" class="result-value"></span>
+          </div>
+
+          <div class="result-row">
+            <span class="result-label">🎨 Renk</span>
+            <span id="result-renk" class="result-value"></span>
+          </div>
+
+          <div class="result-row">
+            <span class="result-label">📋 Tip</span>
+            <span id="result-tip" class="result-value"></span>
+          </div>
+
+          <div class="result-row">
+            <span class="result-label">💰 Tahmini Fiyat Aralığı</span>
+            <span id="result-fiyatAraligi" class="result-value"></span>
+          </div>
+
+        </div>
+
+        <!-- Yeni analiz: formu sıfırlar -->
+        <button type="button" id="new-analysis-btn" class="btn-secondary">🔄 Yeni Analiz</button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Sayfa Altbilgisi -->
+  <footer>
+    <p>Ayakkabı Tanıma Uygulaması &copy; 2026 — Claude AI ile güçlendirilmiştir</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

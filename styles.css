@@ -1,0 +1,747 @@
+/* ============================================================
+   styles.css — Ayakkabı Tanıma Uygulaması
+   Design system: dark palette + amber/gold accent
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   1. CSS Custom Properties (Design Tokens)
+   ------------------------------------------------------------ */
+:root {
+  /* Renkler */
+  --color-bg:           #0a0a0a;   /* Koyu arka plan */
+  --color-surface:      #1a1a1a;   /* Kart/yüzey arka planı */
+  --color-text:         #f5f5f5;   /* Ana metin */
+  --color-text-muted:   #9a9a9a;   /* İkincil metin */
+  --color-accent:       #f59e0b;   /* Altın/amber vurgu */
+  --color-accent-dark:  #d97706;   /* Koyu altın (hover) */
+  --color-border:       #2a2a2a;   /* Kenarlık */
+  --color-error:        #ef4444;   /* Hata rengi */
+
+  /* Tipografi */
+  --font-family:        system-ui, -apple-system, sans-serif;
+  --font-size-xs:       0.75rem;
+  --font-size-sm:       0.875rem;
+  --font-size-base:     1rem;
+  --font-size-lg:       1.25rem;
+  --font-size-xl:       1.5rem;    /* h2 */
+  --font-size-2xl:      2rem;      /* h1 */
+
+  /* Boşluklar */
+  --space-1:  0.25rem;
+  --space-2:  0.5rem;
+  --space-3:  0.75rem;
+  --space-4:  1rem;
+  --space-6:  1.5rem;
+  --space-8:  2rem;
+  --space-12: 3rem;
+
+  /* Köşe yuvarlaklığı */
+  --radius-sm:  0.25rem;
+  --radius-md:  0.5rem;
+  --radius-lg:  1rem;
+  --radius-xl:  1.5rem;
+  --radius-full: 9999px;
+
+  /* Gölgeler */
+  --shadow-sm:  0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md:  0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg:  0 8px 24px rgba(0, 0, 0, 0.6);
+
+  /* Geçişler */
+  --transition-fast:   150ms ease;
+  --transition-normal: 250ms ease;
+}
+
+/* ------------------------------------------------------------
+   2. CSS Reset
+   ------------------------------------------------------------ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  line-height: 1.6;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+input {
+  font-family: inherit;
+}
+
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--color-accent-dark);
+}
+
+/* ------------------------------------------------------------
+   3. Tipografi
+   ------------------------------------------------------------ */
+h1 {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--color-text);
+}
+
+h2 {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+h3 {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+}
+
+small {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+p {
+  line-height: 1.7;
+}
+
+/* ------------------------------------------------------------
+   4. Layout — Kapsayıcı
+   ------------------------------------------------------------ */
+.container,
+.header-inner,
+main,
+footer > * {
+  max-width: 900px;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--space-6);
+  padding-right: var(--space-6);
+}
+
+/* ------------------------------------------------------------
+   5. Header
+   ------------------------------------------------------------ */
+header {
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-6) 0;
+  background-color: var(--color-surface);
+}
+
+.header-inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+header h1 {
+  color: var(--color-accent);   /* Altın vurgu */
+}
+
+header .subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+/* ------------------------------------------------------------
+   6. Main Content
+   ------------------------------------------------------------ */
+main {
+  flex: 1;
+  padding-top: var(--space-8);
+  padding-bottom: var(--space-12);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+/* ------------------------------------------------------------
+   7. Sections
+   ------------------------------------------------------------ */
+section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* ------------------------------------------------------------
+   8. API Key Input
+   ------------------------------------------------------------ */
+#api-key-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+#api-key-section label {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Satır: input + Göster/Gizle + Kaydet */
+.api-key-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: stretch;
+}
+
+#api-key-input {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-size: var(--font-size-base);
+  transition: border-color var(--transition-fast);
+  outline: none;
+  min-width: 0;
+}
+
+#api-key-input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+}
+
+#api-key-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* Göster/Gizle butonu */
+.btn-icon {
+  padding: var(--space-2) var(--space-3);
+  background-color: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.btn-icon:hover {
+  border-color: var(--color-text-muted);
+  color: var(--color-text);
+}
+
+/* Kaydet butonu */
+.btn-save {
+  padding: var(--space-2) var(--space-4);
+  background-color: var(--color-accent);
+  border: none;
+  border-radius: var(--radius-md);
+  color: #000;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color var(--transition-fast);
+}
+
+.btn-save:hover {
+  background-color: var(--color-accent-dark);
+}
+
+/* Onay mesajı */
+.api-key-saved {
+  font-size: var(--font-size-sm);
+  color: #22c55e;   /* yeşil */
+  font-weight: 500;
+}
+
+/* ------------------------------------------------------------
+   9. Drop Zone
+   ------------------------------------------------------------ */
+#drop-zone {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-12) var(--space-8);
+  text-align: center;
+  background-color: var(--color-surface);
+  transition: border-color var(--transition-normal), background-color var(--transition-normal);
+  cursor: pointer;
+}
+
+#drop-zone:hover,
+#drop-zone.drag-over {
+  border-color: var(--color-accent);
+  background-color: rgba(245, 158, 11, 0.05);
+}
+
+.drop-zone-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.drop-icon {
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.drop-zone-inner p {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* ------------------------------------------------------------
+   10. Butonlar
+   ------------------------------------------------------------ */
+.btn-upload,
+.btn-primary,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
+  border: none;
+}
+
+.btn-upload:active,
+.btn-primary:active,
+.btn-secondary:active {
+  transform: scale(0.97);
+}
+
+/* Yükleme butonu (label) */
+.btn-upload {
+  background-color: var(--color-accent);
+  color: #000;
+  cursor: pointer;
+}
+
+.btn-upload:hover {
+  background-color: var(--color-accent-dark);
+}
+
+/* Ana aksiyon butonu */
+.btn-primary {
+  background-color: var(--color-accent);
+  color: #000;
+  width: 100%;
+  padding: var(--space-4) var(--space-6);
+  font-size: var(--font-size-base);
+  border-radius: var(--radius-lg);
+}
+
+.btn-primary:hover {
+  background-color: var(--color-accent-dark);
+}
+
+/* İkincil buton */
+.btn-secondary {
+  background-color: transparent;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+}
+
+.btn-secondary:hover {
+  border-color: var(--color-text-muted);
+  color: var(--color-text);
+}
+
+/* ------------------------------------------------------------
+   11. Önizleme
+   ------------------------------------------------------------ */
+#preview-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  align-items: center;
+}
+
+#preview-image {
+  max-width: 100%;
+  max-height: 400px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  object-fit: contain;
+  box-shadow: var(--shadow-md);
+}
+
+/* Dosya adı ve boyut bilgisi */
+.file-name-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  text-align: center;
+  word-break: break-all;
+}
+
+/* Önizleme aksiyon butonları (Değiştir + Analiz Et) */
+.preview-actions {
+  display: flex;
+  gap: var(--space-3);
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.preview-actions .btn-secondary {
+  flex: 0 0 auto;
+}
+
+.preview-actions .btn-primary {
+  flex: 1;
+}
+
+/* ------------------------------------------------------------
+   12. Yükleme Animasyonu (Spinner)
+   ------------------------------------------------------------ */
+#loading-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-12) 0;
+}
+
+#loading-indicator p {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: var(--radius-full);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+/* ------------------------------------------------------------
+   13. Yükleme Bölümü (#loading-section)
+   ------------------------------------------------------------ */
+#loading-section {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+  min-height: 40vh;
+  text-align: center;
+}
+
+#loading-text {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+/* ------------------------------------------------------------
+   14. Sonuç Kartı (.result-card)
+   ------------------------------------------------------------ */
+
+/* Kart kapsayıcı: altın üst kenarlık + koyu yüzey */
+.result-card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-top: 4px solid var(--color-accent);   /* Altın/amber üst vurgu */
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  box-shadow: var(--shadow-lg);
+}
+
+.result-card h2 {
+  color: var(--color-accent);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* Satır listesi */
+.result-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Her sonuç satırı: etiket solda, değer sağda */
+.result-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.result-row:last-child {
+  border-bottom: none;
+}
+
+/* Etiket (ikon + metin, soluk renk) */
+.result-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+/* Değer (beyaz, kalın) */
+.result-value {
+  font-weight: 700;
+  color: var(--color-text);
+  text-align: right;
+  max-width: 60%;
+}
+
+/* ------------------------------------------------------------
+   15. Hata Bölümü (#error-section)
+   ------------------------------------------------------------ */
+
+/* Bölüm kapsayıcı — max-width ile hizalanır */
+#error-section {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* Hata kartı: kırmızı kenarlık, kırmızı tintli arka plan */
+.error-card {
+  position: relative;
+  background-color: rgba(239, 68, 68, 0.08);
+  border: 2px solid var(--color-error);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: center;
+}
+
+/* Kapatma (dismiss) butonu: sağ üst köşe */
+.error-dismiss {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  background: transparent;
+  border: none;
+  color: var(--color-error);
+  font-size: var(--font-size-lg);
+  line-height: 1;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast);
+}
+
+.error-dismiss:hover {
+  background-color: rgba(239, 68, 68, 0.15);
+}
+
+/* Hata ikonu */
+.error-icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+/* Hata mesajı metni */
+#error-message {
+  color: var(--color-error);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  max-width: 480px;
+}
+
+/* ------------------------------------------------------------
+   16. Footer
+   ------------------------------------------------------------ */
+footer {
+  border-top: 1px solid var(--color-border);
+  padding: var(--space-6) 0;
+  text-align: center;
+  background-color: var(--color-surface);
+}
+
+footer p {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+/* ------------------------------------------------------------
+   17. Utility: hidden niteliği
+   ------------------------------------------------------------ */
+[hidden] {
+  display: none !important;
+}
+
+/* ------------------------------------------------------------
+   18. "Nasıl Kullanılır?" Açılır Bölüm
+   ------------------------------------------------------------ */
+#how-to-section {
+  margin-top: var(--space-4);
+}
+
+/* <details> elementi: border yok, arka plan yok */
+#how-to-details {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  overflow: hidden;
+}
+
+/* <summary>: tıklanabilir başlık */
+#how-to-details summary {
+  cursor: pointer;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  list-style: none;               /* varsayılan ok ikonunu gizle */
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  user-select: none;
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+
+#how-to-details summary:hover {
+  color: var(--color-text);
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+#how-to-details summary::before {
+  content: '▶';
+  font-size: var(--font-size-xs);
+  color: var(--color-accent);
+  transition: transform var(--transition-fast);
+}
+
+#how-to-details[open] summary::before {
+  transform: rotate(90deg);
+}
+
+/* İçerik: numaralı adımlar listesi */
+.how-to-content {
+  padding: var(--space-4) var(--space-6);
+  padding-top: 0;
+}
+
+.how-to-content ol {
+  padding-left: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.how-to-content li {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
+.how-to-content li strong {
+  color: var(--color-text);
+}
+
+/* ------------------------------------------------------------
+   19. Responsive — Mobil (max-width: 640px)
+   ------------------------------------------------------------ */
+@media (max-width: 640px) {
+  :root {
+    --font-size-2xl: 1.5rem;   /* h1 küçültme */
+    --font-size-xl:  1.25rem;  /* h2 küçültme */
+  }
+
+  .header-inner,
+  main,
+  footer p {
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+  }
+
+  /* Bırakma alanı: mobilde daha küçük, minimum yükseklik 150px */
+  #drop-zone {
+    padding: var(--space-6) var(--space-4);
+    min-height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Sonuç kartı: mobilde padding 16px */
+  .result-card {
+    padding: 16px;
+  }
+
+  .result-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+  }
+
+  .result-value {
+    text-align: left;
+    color: var(--color-accent);
+    max-width: 100%;
+  }
+
+  /* Butonlar: mobilde tam genişlik */
+  .btn-upload,
+  .btn-primary,
+  .btn-secondary,
+  .btn-save {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Önizleme aksiyon butonları: dikey sıralama */
+  .preview-actions {
+    flex-direction: column;
+  }
+
+  /* API key satırı: sarılabilir */
+  .api-key-row {
+    flex-wrap: wrap;
+  }
+
+  #api-key-input {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+}
