@@ -210,8 +210,15 @@ section {
   letter-spacing: 0.05em;
 }
 
+/* Satır: input + Göster/Gizle + Kaydet */
+.api-key-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: stretch;
+}
+
 #api-key-input {
-  width: 100%;
+  flex: 1;
   padding: var(--space-3) var(--space-4);
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -220,6 +227,7 @@ section {
   font-size: var(--font-size-base);
   transition: border-color var(--transition-fast);
   outline: none;
+  min-width: 0;
 }
 
 #api-key-input:focus {
@@ -229,6 +237,47 @@ section {
 
 #api-key-input::placeholder {
   color: var(--color-text-muted);
+}
+
+/* Göster/Gizle butonu */
+.btn-icon {
+  padding: var(--space-2) var(--space-3);
+  background-color: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.btn-icon:hover {
+  border-color: var(--color-text-muted);
+  color: var(--color-text);
+}
+
+/* Kaydet butonu */
+.btn-save {
+  padding: var(--space-2) var(--space-4);
+  background-color: var(--color-accent);
+  border: none;
+  border-radius: var(--radius-md);
+  color: #000;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color var(--transition-fast);
+}
+
+.btn-save:hover {
+  background-color: var(--color-accent-dark);
+}
+
+/* Onay mesajı */
+.api-key-saved {
+  font-size: var(--font-size-sm);
+  color: #22c55e;   /* yeşil */
+  font-weight: 500;
 }
 
 /* ------------------------------------------------------------

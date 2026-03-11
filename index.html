@@ -24,12 +24,17 @@
       <!-- API Key Girişi -->
       <div id="api-key-section">
         <label for="api-key-input">Claude API Anahtarı</label>
-        <input
-          type="password"
-          id="api-key-input"
-          placeholder="sk-ant-..."
-          autocomplete="off"
-        >
+        <div class="api-key-row">
+          <input
+            type="password"
+            id="api-key-input"
+            placeholder="Claude API anahtarınızı girin"
+            autocomplete="off"
+          >
+          <button type="button" id="api-key-toggle" class="btn-icon" aria-label="Göster/Gizle">Göster</button>
+          <button type="button" id="api-key-save" class="btn-save">Kaydet</button>
+        </div>
+        <p id="api-key-saved-msg" class="api-key-saved" hidden>API anahtarı kaydedildi ✓</p>
       </div>
 
       <!-- Sürükle & Bırak Alanı -->
