@@ -30,6 +30,118 @@ function loadApiKey() {
 }
 
 /* ============================================================
+   Claude API — Ayakkabı Tanıma
+   ============================================================ */
+
+/**
+ * Seçilen ayakkabı görselini Claude API'ye göndererek tanıma yapar.
+ *
+ * Görseli base64'e çevirir, Claude Haiku modeline vision isteği gönderir,
+ * dönen JSON'u parse ederek yapılandırılmış sonuç döner.
+ *
+ * @param {File} file - Analiz edilecek görsel dosyası (image/*)
+ * @param {string} apiKey - Anthropic Claude API anahtarı
+ * @returns {Promise<{marka: string, model: string, renk: string, tip: string, fiyatAraligi: string}>}
+ */
+async function analyzeShoe(file, apiKey) {
+  // 1. Dosyayı base64'e çevir
+  const base64Data = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      // "data:image/jpeg;base64,XXXX" formatından sadece XXXX kısmını al
+      const dataUrl = e.target.result;
+      const base64 = dataUrl.split(',')[1];
+      resolve(base64);
+    };
+    reader.onerror = () => reject(new Error('Dosya okunamadı'));
+    reader.readAsDataURL(file);
+  });
+
+  // 2. Medya tipini belirle (desteklenen tipler: jpeg, png, webp, gif)
+  const mediaType = file.type || 'image/jpeg';
+
+  // 3. Claude API isteği oluştur
+  const requestBody = {
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 1024,
+    system: `Sen bir ayakkabı tanıma uzmanısın. Kullanıcının gönderdiği ayakkabı fotoğrafını analiz et ve aşağıdaki bilgileri JSON formatında döndür:
+{
+  "marka": "Ayakkabının markası (bilinmiyorsa 'Bilinmiyor')",
+  "model": "Ayakkabının model adı (bilinmiyorsa 'Bilinmiyor')",
+  "renk": "Ayakkabının rengi veya renk kombinasyonu",
+  "tip": "Ayakkabı tipi (spor/günlük/resmi/bot/sandalet/diğer)",
+  "fiyatAraligi": "Türkiye'deki tahmini fiyat aralığı (örn: '500-1000 TL')"
+}
+
+Sadece JSON döndür, başka metin ekleme.`,
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: mediaType,
+              data: base64Data,
+            },
+          },
+          {
+            type: 'text',
+            text: 'Bu ayakkabıyı tanımla ve bilgileri JSON formatında döndür.',
+          },
+        ],
+      },
+    ],
+  };
+
+  // 4. API isteğini gönder
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  // 5. HTTP hatalarını kontrol et
+  if (!response.ok) {
+    let errMsg = 'API isteği başarısız oldu';
+    try {
+      const errData = await response.json();
+      if (errData.error && errData.error.message) {
+        errMsg = errData.error.message;
+      }
+    } catch (_) { /* JSON parse hatası — orijinal mesajı kullan */ }
+    throw new Error(errMsg);
+  }
+
+  // 6. Yanıtı parse et
+  const data = await response.json();
+  const rawText = data.content[0].text;
+
+  // JSON bloğu içinde olabilir (```json ... ``` gibi)
+  const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error('API yanıtı geçerli JSON içermiyor');
+  }
+
+  const result = JSON.parse(jsonMatch[0]);
+
+  // 7. Yapılandırılmış sonucu döndür
+  return {
+    marka: result.marka || 'Bilinmiyor',
+    model: result.model || 'Bilinmiyor',
+    renk: result.renk || 'Bilinmiyor',
+    tip: result.tip || 'Bilinmiyor',
+    fiyatAraligi: result.fiyatAraligi || 'Bilinmiyor',
+  };
+}
+
+/* ============================================================
    Seçilen Dosya — Modül Düzeyinde Durum
    ============================================================ */
 
@@ -91,15 +203,34 @@ document.addEventListener('DOMContentLoaded', () => {
      Sürükle & Bırak / Dosya Seçici
      ============================================================ */
 
-  const dropZone    = document.getElementById('drop-zone');
-  const fileInput   = document.getElementById('file-input');
-  const selectBtn   = document.getElementById('select-btn');
-  const previewSec  = document.getElementById('preview-section');
-  const previewImg  = document.getElementById('preview-image');
-  const fileNameEl  = document.getElementById('file-name');
-  const changeBtn   = document.getElementById('change-btn');
-  const errorBox    = document.getElementById('error-box');
-  const errorMsg    = document.getElementById('error-message');
+  const dropZone      = document.getElementById('drop-zone');
+  const fileInput     = document.getElementById('file-input');
+  const selectBtn     = document.getElementById('select-btn');
+  const previewSec    = document.getElementById('preview-section');
+  const previewImg    = document.getElementById('preview-image');
+  const fileNameEl    = document.getElementById('file-name');
+  const changeBtn     = document.getElementById('change-btn');
+  const analyzeBtn    = document.getElementById('analyze-btn');
+  const errorBox      = document.getElementById('error-box');
+  const errorMsg      = document.getElementById('error-message');
+  const resultSection = document.getElementById('result-section');
+  const loadingEl     = document.getElementById('loading-indicator');
+  const resultCard    = document.getElementById('result-card');
+  const errorResetBtn = document.getElementById('error-reset-btn');
+  const resetBtn      = document.getElementById('reset-btn');
+
+  /**
+   * Analiz Et butonunu etkinleştirme/devre dışı bırakma durumunu günceller.
+   * Hem selectedFile hem de API anahtarı dolu olduğunda etkinleştirir.
+   */
+  function updateAnalyzeBtn() {
+    const hasFile = !!selectedFile;
+    const hasKey  = !!(apiKeyInput.value || '').trim();
+    analyzeBtn.disabled = !(hasFile && hasKey);
+  }
+
+  // API anahtarı değiştiğinde butonu güncelle
+  apiKeyInput.addEventListener('input', updateAnalyzeBtn);
 
   /**
    * Bayt cinsinden dosya boyutunu okunabilir Türkçe formata çevirir.
@@ -148,6 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     selectedFile = file;
     showPreview(file);
+    updateAnalyzeBtn();
   }
 
   // --- Değiştir butonu: seçimi temizle ve önizlemeyi gizle ---
@@ -156,6 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
     previewImg.src = '';
     fileNameEl.textContent = '';
     previewSec.hidden = true;
+    updateAnalyzeBtn();
   });
 
   /**
@@ -170,6 +303,69 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
       errorBox.hidden = true;
     }, 4000);
+  }
+
+  /**
+   * Analiz sonuçlarını ekranda gösterir.
+   *
+   * @param {{marka: string, model: string, renk: string, tip: string, fiyatAraligi: string}} result
+   */
+  function showResult(result) {
+    document.getElementById('res-brand').textContent = result.marka;
+    document.getElementById('res-model').textContent = result.model;
+    document.getElementById('res-color').textContent = result.renk;
+    document.getElementById('res-type').textContent  = result.tip;
+    document.getElementById('res-price').textContent = result.fiyatAraligi;
+    loadingEl.hidden  = true;
+    resultCard.hidden = false;
+  }
+
+  /**
+   * Hata mesajını sonuç bölümünde gösterir.
+   *
+   * @param {string} message - Türkçe hata mesajı
+   */
+  function showResultError(message) {
+    errorMsg.textContent = message;
+    loadingEl.hidden = true;
+    errorBox.hidden  = false;
+  }
+
+  // --- Analiz Et butonu ---
+  analyzeBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+    const apiKey = (apiKeyInput.value || '').trim();
+    if (!apiKey) return;
+
+    // Sonuç bölümünü hazırla: yüklenme göster
+    resultCard.hidden = true;
+    errorBox.hidden   = true;
+    loadingEl.hidden  = false;
+    resultSection.hidden = false;
+
+    try {
+      const result = await analyzeShoe(selectedFile, apiKey);
+      showResult(result);
+    } catch (err) {
+      // Hata mesajını Türkçe göster
+      const message = err.message || 'Bilinmeyen bir hata oluştu';
+      showResultError('Analiz başarısız: ' + message);
+    }
+  });
+
+  // --- Sıfırla / Geri Dön butonları ---
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      resultSection.hidden = true;
+      resultCard.hidden = true;
+    });
+  }
+
+  if (errorResetBtn) {
+    errorResetBtn.addEventListener('click', () => {
+      resultSection.hidden = true;
+      errorBox.hidden = true;
+    });
   }
 
   // --- Drop Zone: dragover ---

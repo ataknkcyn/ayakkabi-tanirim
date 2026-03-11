@@ -5,13 +5,19 @@ Started: 2026-03-11
 
 ## Codebase Patterns
 - Pure HTML/CSS/Vanilla JS project — no build tool, no package.json, open index.html directly in browser
-- Tests use Node.js ESM (import/export), run with: node tests/<test-file>.js
+- Tests use Node.js ESM (import/export), run with: node tests/<test-name>.js
 - Git commits: `git -c user.email="developer@openclaw" -c user.name="Developer" commit -m "..."`
 - No .env or secrets — API key stored in browser localStorage only
-- Test pattern: mock browser APIs (localStorage, DOM) via pure JS objects in Node; also do source-text assertions on HTML/JS files
-- CSS classes for new UI rows: use BEM-ish flat naming (.api-key-row, .btn-icon, .btn-save, .api-key-saved)
-- `[hidden]` CSS utility is in styles.css — use `element.hidden = true/false` in JS, never touch display directly
-- showSavedMessage() uses a timer stored on the function itself (showSavedMessage._timer) to cancel previous timers — useful pattern for debounced UI feedback
+- Module-level state variables (selectedFile) declared outside DOMContentLoaded, handlers inside
+- DOMContentLoaded wraps all DOM manipulation; module-level variables declared above it
+- Test files parse source files as strings (readFileSync + regex) — no DOM/browser runtime needed
+- CSS `.drag-over` class applied via JS; styled in CSS with `#drop-zone:hover, #drop-zone.drag-over { ... }`
+- Hidden `<input type="file">` + `fileInput.click()` pattern for programmatic file picker trigger
+- FileReader + readAsDataURL for image preview before upload
+- `hidden` HTML attribute used for initially-hidden sections; CSS `[hidden] { display: none !important; }` handles display
+- Extract show/hide logic into named functions (showPreview, showError) rather than inlining in event handlers
+- File size formatting: bytes → KB → MB with Turkish decimal comma (toFixed(1).replace('.', ','))
+- Preview actions layout: flex row with `.btn-secondary` (flex: 0 auto) + `.btn-primary` (flex: 1) side by side
 
 ---
 
@@ -28,27 +34,43 @@ Started: 2026-03-11
 
 ---
 
-## 2026-03-11 - US-003: API key input with localStorage persistence
-- Updated index.html: replaced basic #api-key-section with a full row (.api-key-row) containing:
-  - input[type=password][id=api-key-input] with Turkish placeholder "Claude API anahtarınızı girin"
-  - #api-key-toggle button (Göster/Gizle)
-  - #api-key-save button (Kaydet)
-  - #api-key-saved-msg paragraph (hidden by default, Turkish confirmation text)
-- Updated app.js: replaced placeholder with full implementation:
-  - saveApiKey(apiKey) with JSDoc — trims input, calls localStorage.setItem, returns bool
-  - loadApiKey() with JSDoc — calls localStorage.getItem, returns string or null
-  - DOMContentLoaded listener: populates input from localStorage, wires up toggle + save buttons
-  - showSavedMessage() internal helper — shows confirmation for 3 seconds
-- Updated styles.css: added styles for .api-key-row, .btn-icon, .btn-save, .api-key-saved
-- Created tests/api-key-test.js — 22 assertions covering:
-  - saveApiKey with valid key, empty key, whitespace-only, trimming
-  - loadApiKey when nothing stored
-  - Source text assertions on app.js (functions defined, JSDoc, localStorage calls)
-  - Source text assertions on index.html (UI elements, placeholder text)
-- All 22 new tests pass; all prior tests (smoke-test: 11, css-test: 23) still pass
-- Committed: feat: US-003 - API key input with localStorage persistence (a86054a)
+## 2026-03-11 - US-004: Drag & drop and file picker upload zone
+- Updated index.html: changed drop zone text to "Ayakkabı fotoğrafını buraya sürükle veya", changed `<label>` to `<button id="select-btn">` for the file picker trigger
+- Added module-level `let selectedFile = null` to app.js (above DOMContentLoaded)
+- Added drag & drop event handlers to app.js:
+  - `dragover`: calls preventDefault(), adds `.drag-over` class
+  - `dragleave`: removes `.drag-over` class (checks relatedTarget to avoid flicker)
+  - `drop`: calls preventDefault(), removes `.drag-over`, calls handleFile(file)
+- Added `handleFile(file)` function: validates image/* type, shows Turkish error, sets selectedFile, shows preview via FileReader
+- Added click handlers: drop zone click → fileInput.click(), select button click → fileInput.click() (stopPropagation to avoid double trigger)
+- Added fileInput change handler: calls handleFile, resets fileInput.value for re-select
+- Created tests/upload-test.js — 19 assertions covering app.js, index.html, styles.css; all passing
+- Committed: feat: US-004 - Drag & drop and file picker upload zone (8982960)
 - **Learnings:**
-  - No jsdom needed — pure string assertions on source files + mock localStorage objects work cleanly in Node ESM
-  - Timer pattern `fn._timer = setTimeout(...)` avoids needing a separate module-level variable for debounced feedback messages
+  - Use `e.stopPropagation()` on inner button to prevent double-trigger with parent drop zone click
+  - Use `dragleave` with `relatedTarget` check to avoid flicker when hovering child elements
+  - Reset `fileInput.value = ''` after handling so same file can be re-selected
+  - Test files use readFileSync + regex — works without browser runtime
+
+---
+
+## 2026-03-11 - US-005: Image preview display after file selection
+- Updated index.html: added `<p id="file-name">` and `<button id="change-btn">Değiştir</button>` inside `#preview-section`; wrapped buttons in `.preview-actions` div; fixed alt text to "Seçilen ayakkabı fotoğrafı"
+- Updated app.js:
+  - Added `formatFileSize(bytes)` helper — converts bytes to human-readable Turkish format (e.g. "2,3 MB")
+  - Extracted `showPreview(file)` function with JSDoc: uses FileReader.readAsDataURL, sets preview-image src, sets file-name text (name + formatted size), sets previewSec.hidden = false
+  - Updated `handleFile` to call `showPreview(file)` instead of inline FileReader logic
+  - Added `changeBtn` click handler: clears selectedFile, clears previewImg.src and fileNameEl.textContent, sets previewSec.hidden = true
+- Updated styles.css:
+  - Updated `#preview-image`: max-height 360px → 400px, added explicit max-width: 100%
+  - Added `.file-name-text` style for small muted text
+  - Added `.preview-actions` flex container with gap for Değiştir + Analiz Et buttons side by side
+- Created tests/preview-test.js — 19 assertions; all passing
+- All existing tests still pass (smoke: 11, upload: 19, api-key: 22, css: 23)
+- Committed: feat: US-005 - Image preview display after file selection (99a57bd)
+- **Learnings:**
+  - Turkish decimal separator: use `.replace('.', ',')` for toFixed output
+  - Extract preview logic into `showPreview(file)` — cleaner separation from file validation in `handleFile`
+  - `.preview-actions` flex row pattern: secondary button auto-width, primary button flex:1 fills remaining space
 
 ---
