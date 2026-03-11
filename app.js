@@ -96,8 +96,40 @@ document.addEventListener('DOMContentLoaded', () => {
   const selectBtn   = document.getElementById('select-btn');
   const previewSec  = document.getElementById('preview-section');
   const previewImg  = document.getElementById('preview-image');
+  const fileNameEl  = document.getElementById('file-name');
+  const changeBtn   = document.getElementById('change-btn');
   const errorBox    = document.getElementById('error-box');
   const errorMsg    = document.getElementById('error-message');
+
+  /**
+   * Bayt cinsinden dosya boyutunu okunabilir Türkçe formata çevirir.
+   * Örn: 2457600 → "2,3 MB"
+   *
+   * @param {number} bytes - Dosya boyutu (bayt)
+   * @returns {string} Okunabilir boyut metni
+   */
+  function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1).replace('.', ',') + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1).replace('.', ',') + ' MB';
+  }
+
+  /**
+   * Seçilen görsel dosyasını önizleme bölümünde gösterir.
+   * FileReader ile dosyayı base64'e çevirir, img src'yi günceller,
+   * dosya adı ve boyutunu Türkçe formatta yazar ve bölümü görünür yapar.
+   *
+   * @param {File} file - Önizlenecek görsel dosyası
+   */
+  function showPreview(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      previewImg.src = e.target.result;
+      fileNameEl.textContent = file.name + ' — ' + formatFileSize(file.size);
+      previewSec.hidden = false;
+    };
+    reader.readAsDataURL(file);
+  }
 
   /**
    * Seçilen ya da bırakılan dosyayı işler.
@@ -115,15 +147,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     selectedFile = file;
-
-    // Önizlemeyi göster
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      previewImg.src = e.target.result;
-      previewSec.hidden = false;
-    };
-    reader.readAsDataURL(file);
+    showPreview(file);
   }
+
+  // --- Değiştir butonu: seçimi temizle ve önizlemeyi gizle ---
+  changeBtn.addEventListener('click', () => {
+    selectedFile = null;
+    previewImg.src = '';
+    fileNameEl.textContent = '';
+    previewSec.hidden = true;
+  });
 
   /**
    * Hata mesajını gösterir.
