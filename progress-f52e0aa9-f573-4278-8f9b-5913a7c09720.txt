@@ -14,10 +14,10 @@ Started: 2026-03-11
 - CSS `.drag-over` class applied via JS; styled in CSS with `#drop-zone:hover, #drop-zone.drag-over { ... }`
 - Hidden `<input type="file">` + `fileInput.click()` pattern for programmatic file picker trigger
 - FileReader + readAsDataURL for image preview before upload
-- `hidden` HTML attribute used for initially-hidden sections; CSS `[hidden] { display: none !important; }` handles display
-- Extract show/hide logic into named functions (showPreview, showError) rather than inlining in event handlers
-- File size formatting: bytes → KB → MB with Turkish decimal comma (toFixed(1).replace('.', ','))
-- Preview actions layout: flex row with `.btn-secondary` (flex: 0 auto) + `.btn-primary` (flex: 1) side by side
+- async/await with FileReader: wrap readAsDataURL in a Promise for clean async usage in async functions
+- Button enable/disable state: use a central `updateAnalyzBtn()` helper called from every state-changing point (file select, key input, file clear)
+- Test regex for multi-line code: replace `/\n/g, ' '` before testing cross-line patterns, or use `[\s\S]` for multiline
+- Anthropic browser access: requires `anthropic-dangerous-direct-browser-access: true` header for direct browser fetch calls
 
 ---
 
@@ -54,23 +54,44 @@ Started: 2026-03-11
 
 ---
 
-## 2026-03-11 - US-005: Image preview display after file selection
-- Updated index.html: added `<p id="file-name">` and `<button id="change-btn">Değiştir</button>` inside `#preview-section`; wrapped buttons in `.preview-actions` div; fixed alt text to "Seçilen ayakkabı fotoğrafı"
-- Updated app.js:
-  - Added `formatFileSize(bytes)` helper — converts bytes to human-readable Turkish format (e.g. "2,3 MB")
-  - Extracted `showPreview(file)` function with JSDoc: uses FileReader.readAsDataURL, sets preview-image src, sets file-name text (name + formatted size), sets previewSec.hidden = false
-  - Updated `handleFile` to call `showPreview(file)` instead of inline FileReader logic
-  - Added `changeBtn` click handler: clears selectedFile, clears previewImg.src and fileNameEl.textContent, sets previewSec.hidden = true
-- Updated styles.css:
-  - Updated `#preview-image`: max-height 360px → 400px, added explicit max-width: 100%
-  - Added `.file-name-text` style for small muted text
-  - Added `.preview-actions` flex container with gap for Değiştir + Analiz Et buttons side by side
-- Created tests/preview-test.js — 19 assertions; all passing
-- All existing tests still pass (smoke: 11, upload: 19, api-key: 22, css: 23)
-- Committed: feat: US-005 - Image preview display after file selection (99a57bd)
+## 2026-03-11 - US-006: Claude API integration: base64 encoding and API call
+- Added `analyzeShoe(file, apiKey)` async function to app.js (module level, before DOMContentLoaded):
+  - Wraps FileReader.readAsDataURL in a Promise for clean async/await usage
+  - Strips `data:image/...;base64,` prefix from data URL to get raw base64
+  - Determines mediaType from file.type (passes through as-is)
+  - Builds Claude API messages payload with vision content (type: 'image', source.type: 'base64')
+  - Turkish system prompt instructing Claude to return marka, model, renk, tip, fiyatAraligi as JSON
+  - POSTs to `https://api.anthropic.com/v1/messages` with required headers:
+    - `x-api-key`, `anthropic-version: 2023-06-01`
+    - `anthropic-dangerous-direct-browser-access: true`
+    - `content-type: application/json`
+  - Parses response.content[0].text, extracts JSON block with regex, JSON.parses it
+  - Returns `{ marka, model, renk, tip, fiyatAraligi }` with "Bilinmiyor" fallbacks
+  - Full JSDoc with @param/@returns annotations
+- Added inside DOMContentLoaded:
+  - `updateAnalyzeBtn()` helper: disables/enables analyze-btn based on selectedFile && apiKey non-empty
+  - `apiKeyInput` input event listener → calls updateAnalyzeBtn()
+  - `analyzeBtn` click handler: shows loading, calls analyzeShoe, displays result card or error
+  - `showResult(result)` function: populates result list DOM elements
+  - `showResultError(message)` function: shows error in result section
+  - reset and errorReset button handlers
+  - updateAnalyzeBtn() called after handleFile() and changeBtn click
+- Updated index.html:
+  - Added `disabled` attribute to `<button id="analyze-btn">` (default disabled)
+- Created tests/api-test.js — 32 assertions; all passing:
+  - analyzeShoe function signature and JSDoc
+  - Correct API URL and POST method
+  - All required headers present
+  - Model name, vision content structure, base64 encoding
+  - System prompt fields (marka, model, renk, tip, fiyatAraligi)
+  - Return value structure
+  - updateAnalyzeBtn function and disabled state management
+  - Analyze button in HTML with disabled attribute
+- Committed: feat: US-006 - Claude API integration: base64 encoding and API call (9eea83c)
 - **Learnings:**
-  - Turkish decimal separator: use `.replace('.', ',')` for toFixed output
-  - Extract preview logic into `showPreview(file)` — cleaner separation from file validation in `handleFile`
-  - `.preview-actions` flex row pattern: secondary button auto-width, primary button flex:1 fills remaining space
+  - Wrap FileReader in Promise for clean async/await in async functions
+  - Central `updateAnalyzeBtn()` called from all state-mutation points keeps button state consistent
+  - Test regex `[\s\S]{0,200}` safer than `[^}]*` for matching code across multi-line blocks with inner braces
+  - `anthropic-dangerous-direct-browser-access: true` header is mandatory for direct browser API calls
 
 ---
