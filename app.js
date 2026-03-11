@@ -107,16 +107,11 @@ Sadece JSON döndür, başka metin ekleme.`,
     body: JSON.stringify(requestBody),
   });
 
-  // 5. HTTP hatalarını kontrol et
+  // 5. HTTP hatalarını kontrol et — hata nesnesine status kodu ekle
   if (!response.ok) {
-    let errMsg = 'API isteği başarısız oldu';
-    try {
-      const errData = await response.json();
-      if (errData.error && errData.error.message) {
-        errMsg = errData.error.message;
-      }
-    } catch (_) { /* JSON parse hatası — orijinal mesajı kullan */ }
-    throw new Error(errMsg);
+    const apiErr = new Error(`HTTP ${response.status}`);
+    apiErr.status = response.status;
+    throw apiErr;
   }
 
   // 6. Yanıtı parse et
@@ -126,10 +121,19 @@ Sadece JSON döndür, başka metin ekleme.`,
   // JSON bloğu içinde olabilir (```json ... ``` gibi)
   const jsonMatch = rawText.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
-    throw new Error('API yanıtı geçerli JSON içermiyor');
+    const jsonErr = new Error('API yanıtı geçerli JSON içermiyor');
+    jsonErr.isJsonError = true;
+    throw jsonErr;
   }
 
-  const result = JSON.parse(jsonMatch[0]);
+  let result;
+  try {
+    result = JSON.parse(jsonMatch[0]);
+  } catch (_) {
+    const parseErr = new Error('JSON parse hatası');
+    parseErr.isJsonError = true;
+    throw parseErr;
+  }
 
   // 7. Yapılandırılmış sonucu döndür
   return {
@@ -139,6 +143,60 @@ Sadece JSON döndür, başka metin ekleme.`,
     tip: result.tip || 'Bilinmiyor',
     fiyatAraligi: result.fiyatAraligi || 'Bilinmiyor',
   };
+}
+
+/* ============================================================
+   Hata Mesajı Sabitleri — Türkçe hata metinleri
+   ============================================================ */
+
+/** Dosya seçilmeden analiz yapılmaya çalışıldığında gösterilir. */
+const ERR_NO_FILE    = 'Lütfen önce bir ayakkabı fotoğrafı seçin.';
+
+/** API anahtarı girilmeden analiz yapılmaya çalışıldığında gösterilir. */
+const ERR_NO_API_KEY = 'Lütfen Claude API anahtarınızı girin.';
+
+/** HTTP 401 — geçersiz veya süresi dolmuş API anahtarı. */
+const ERR_UNAUTHORIZED = 'API anahtarı geçersiz. Lütfen doğru anahtarı girin.';
+
+/** HTTP 429 — istek limiti (rate limit) aşıldı. */
+const ERR_RATE_LIMIT = 'İstek limiti aşıldı. Lütfen birkaç dakika bekleyin.';
+
+/** HTTP 500+ — Claude API tarafındaki geçici sunucu hatası. */
+const ERR_SERVER = 'Claude API geçici bir hata döndürdü. Lütfen tekrar deneyin.';
+
+/** Ağ bağlantısı hatası — fetch isteği gönderilemedi. */
+const ERR_NETWORK = 'Ağ bağlantısı hatası. İnternet bağlantınızı kontrol edin.';
+
+/** JSON parse hatası — API yanıtı işlenemedi. */
+const ERR_JSON = 'Yanıt işlenirken hata oluştu. Lütfen tekrar deneyin.';
+
+/* ============================================================
+   Hata Gösterimi — showError / hideError
+   ============================================================ */
+
+/**
+ * Hata bölümünü (#error-section) gösterir ve mesajı yazar.
+ * Sayfayı hata kartına kaydırır.
+ *
+ * @param {string} message - Gösterilecek Türkçe hata mesajı
+ */
+function showError(message) {
+  const errorSection = document.getElementById('error-section');
+  const errorMessage = document.getElementById('error-message');
+
+  if (errorMessage) errorMessage.textContent = message;
+  if (errorSection) {
+    errorSection.style.display = 'flex';
+    errorSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+/**
+ * Hata bölümünü (#error-section) gizler.
+ */
+function hideError() {
+  const errorSection = document.getElementById('error-section');
+  if (errorSection) errorSection.style.display = 'none';
 }
 
 /* ============================================================
@@ -280,10 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const fileNameEl    = document.getElementById('file-name');
   const changeBtn     = document.getElementById('change-btn');
   const analyzeBtn    = document.getElementById('analyze-btn');
-  const errorBox        = document.getElementById('error-box');
-  const errorMsg        = document.getElementById('error-message');
   const resultSection   = document.getElementById('result-section');
-  const errorResetBtn   = document.getElementById('error-reset-btn');
   const newAnalysisBtn  = document.getElementById('new-analysis-btn');
 
   /**
@@ -358,52 +413,48 @@ document.addEventListener('DOMContentLoaded', () => {
     updateAnalyzeBtn();
   });
 
-  /**
-   * Hata mesajını gösterir.
-   *
-   * @param {string} message - Gösterilecek Türkçe hata mesajı
-   */
-  function showError(message) {
-    errorMsg.textContent = message;
-    errorBox.hidden = false;
-    // 4 saniye sonra otomatik gizle
-    setTimeout(() => {
-      errorBox.hidden = true;
-    }, 4000);
-  }
-
-  /**
-   * Hata mesajını sonuç bölümünde gösterir.
-   * #result-section'ı görünür yapar ve error-box'ı açar.
-   *
-   * @param {string} message - Türkçe hata mesajı
-   */
-  function showResultError(message) {
-    errorMsg.textContent = message;
-    resultSection.style.display = 'block';
-    errorBox.hidden = false;
-  }
-
   // --- Analiz Et butonu ---
   analyzeBtn.addEventListener('click', async () => {
-    if (!selectedFile) return;
+    // Dosya seçilmediyse Türkçe hata göster
+    if (!selectedFile) {
+      showError(ERR_NO_FILE);
+      return;
+    }
     const apiKey = (apiKeyInput.value || '').trim();
-    if (!apiKey) return;
+    // API anahtarı yoksa Türkçe hata göster
+    if (!apiKey) {
+      showError(ERR_NO_API_KEY);
+      return;
+    }
+
+    // Önceki hata mesajını gizle
+    hideError();
 
     // Yükleme animasyonunu başlat (result-section gizlenir)
     showLoading();
-
-    // Hata kutusunu sıfırla
-    errorBox.hidden = true;
 
     try {
       const result = await analyzeShoe(selectedFile, apiKey);
       // Sonuçları göster (displayResults result-section'ı açar ve scroll yapar)
       displayResults(result);
     } catch (err) {
-      // Hata mesajını Türkçe göster
-      const message = err.message || 'Bilinmeyen bir hata oluştu';
-      showResultError('Analiz başarısız: ' + message);
+      // HTTP durum koduna veya hata türüne göre Türkçe mesaj seç
+      let errorMessage;
+      if (err.status === 401) {
+        errorMessage = ERR_UNAUTHORIZED;
+      } else if (err.status === 429) {
+        errorMessage = ERR_RATE_LIMIT;
+      } else if (err.status >= 500) {
+        errorMessage = ERR_SERVER;
+      } else if (err instanceof TypeError) {
+        // fetch() ağ hatası TypeError fırlatır
+        errorMessage = ERR_NETWORK;
+      } else if (err.isJsonError || err instanceof SyntaxError) {
+        errorMessage = ERR_JSON;
+      } else {
+        errorMessage = err.message || 'Bilinmeyen bir hata oluştu.';
+      }
+      showError(errorMessage);
     } finally {
       // Her durumda yükleme animasyonunu gizle
       hideLoading();
@@ -417,22 +468,14 @@ document.addEventListener('DOMContentLoaded', () => {
       selectedFile = null;
       // Sonuç bölümünü gizle
       resultSection.style.display = 'none';
-      // Hata kutusunu gizle
-      errorBox.hidden = true;
+      // Hata bölümünü gizle
+      hideError();
       // Önizlemeyi gizle ve sıfırla
       previewImg.src = '';
       fileNameEl.textContent = '';
       previewSec.hidden = true;
       // Analiz butonunu güncelle
       updateAnalyzeBtn();
-    });
-  }
-
-  // --- Geri Dön butonu (hata durumu) ---
-  if (errorResetBtn) {
-    errorResetBtn.addEventListener('click', () => {
-      resultSection.style.display = 'none';
-      errorBox.hidden = true;
     });
   }
 

@@ -532,23 +532,60 @@ section {
 }
 
 /* ------------------------------------------------------------
-   15. Hata Kutusu
+   15. Hata Bölümü (#error-section)
    ------------------------------------------------------------ */
-#error-box {
-  background-color: rgba(239, 68, 68, 0.1);
-  border: 1px solid var(--color-error);
+
+/* Bölüm kapsayıcı — max-width ile hizalanır */
+#error-section {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* Hata kartı: kırmızı kenarlık, kırmızı tintli arka plan */
+.error-card {
+  position: relative;
+  background-color: rgba(239, 68, 68, 0.08);
+  border: 2px solid var(--color-error);
   border-radius: var(--radius-lg);
-  padding: var(--space-6);
+  padding: var(--space-6) var(--space-8);
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
   align-items: center;
+  gap: var(--space-3);
   text-align: center;
 }
 
+/* Kapatma (dismiss) butonu: sağ üst köşe */
+.error-dismiss {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  background: transparent;
+  border: none;
+  color: var(--color-error);
+  font-size: var(--font-size-lg);
+  line-height: 1;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast);
+}
+
+.error-dismiss:hover {
+  background-color: rgba(239, 68, 68, 0.15);
+}
+
+/* Hata ikonu */
+.error-icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+/* Hata mesajı metni */
 #error-message {
   color: var(--color-error);
   font-size: var(--font-size-sm);
+  font-weight: 500;
+  max-width: 480px;
 }
 
 /* ------------------------------------------------------------

@@ -14,10 +14,12 @@ Started: 2026-03-11
 - CSS `.drag-over` class applied via JS; styled in CSS with `#drop-zone:hover, #drop-zone.drag-over { ... }`
 - Hidden `<input type="file">` + `fileInput.click()` pattern for programmatic file picker trigger
 - FileReader + readAsDataURL for image preview before upload
-- async/await with FileReader: wrap readAsDataURL in a Promise for clean async usage in async functions
-- Button enable/disable state: use a central `updateAnalyzBtn()` helper called from every state-changing point (file select, key input, file clear)
-- Test regex for multi-line code: replace `/\n/g, ' '` before testing cross-line patterns, or use `[\s\S]` for multiline
-- Anthropic browser access: requires `anthropic-dangerous-direct-browser-access: true` header for direct browser fetch calls
+- Loading state functions (showLoading/hideLoading) defined at module level (before DOMContentLoaded) so they can reference DOM via getElementById at call time — they do NOT cache DOM refs at module scope
+- Use `style="display:none"` (inline style) for initially-hidden sections that JS will toggle via .style.display = 'flex' — avoids [hidden] attribute conflict since [hidden] uses display:none !important
+- try/finally pattern for API calls: showLoading() before fetch, hideLoading() in finally block
+- Module-level helper functions (displayResults, showLoading, hideLoading) use getElementById at call time, NOT cached at module scope — safe because DOMContentLoaded fires before user interaction
+- Result card uses `.result-card` class (not ID) so it can be reused; section uses `#result-section` ID for JS targeting
+- `style.display` toggling (not `hidden` attribute) for sections controlled by displayResults/showLoading — consistent approach throughout
 
 ---
 
@@ -54,44 +56,62 @@ Started: 2026-03-11
 
 ---
 
-## 2026-03-11 - US-006: Claude API integration: base64 encoding and API call
-- Added `analyzeShoe(file, apiKey)` async function to app.js (module level, before DOMContentLoaded):
-  - Wraps FileReader.readAsDataURL in a Promise for clean async/await usage
-  - Strips `data:image/...;base64,` prefix from data URL to get raw base64
-  - Determines mediaType from file.type (passes through as-is)
-  - Builds Claude API messages payload with vision content (type: 'image', source.type: 'base64')
-  - Turkish system prompt instructing Claude to return marka, model, renk, tip, fiyatAraligi as JSON
-  - POSTs to `https://api.anthropic.com/v1/messages` with required headers:
-    - `x-api-key`, `anthropic-version: 2023-06-01`
-    - `anthropic-dangerous-direct-browser-access: true`
-    - `content-type: application/json`
-  - Parses response.content[0].text, extracts JSON block with regex, JSON.parses it
-  - Returns `{ marka, model, renk, tip, fiyatAraligi }` with "Bilinmiyor" fallbacks
-  - Full JSDoc with @param/@returns annotations
-- Added inside DOMContentLoaded:
-  - `updateAnalyzeBtn()` helper: disables/enables analyze-btn based on selectedFile && apiKey non-empty
-  - `apiKeyInput` input event listener → calls updateAnalyzeBtn()
-  - `analyzeBtn` click handler: shows loading, calls analyzeShoe, displays result card or error
-  - `showResult(result)` function: populates result list DOM elements
-  - `showResultError(message)` function: shows error in result section
-  - reset and errorReset button handlers
-  - updateAnalyzeBtn() called after handleFile() and changeBtn click
-- Updated index.html:
-  - Added `disabled` attribute to `<button id="analyze-btn">` (default disabled)
-- Created tests/api-test.js — 32 assertions; all passing:
-  - analyzeShoe function signature and JSDoc
-  - Correct API URL and POST method
-  - All required headers present
-  - Model name, vision content structure, base64 encoding
-  - System prompt fields (marka, model, renk, tip, fiyatAraligi)
-  - Return value structure
-  - updateAnalyzeBtn function and disabled state management
-  - Analyze button in HTML with disabled attribute
-- Committed: feat: US-006 - Claude API integration: base64 encoding and API call (9eea83c)
+## 2026-03-11 - US-007: Loading animation during API call
+- Added `<section id="loading-section" style="display:none">` to index.html between upload-section and result-section
+  - Contains `.spinner` div and `<p id="loading-text">Ayakkabı analiz ediliyor...</p>`
+- Added to styles.css:
+  - `@keyframes pulse` (opacity 1 → 0.4 → 1 over 1.6s) for pulsing text
+  - `#loading-section` styles: flex column, centered, min-height: 40vh
+  - `#loading-text` with pulse animation
+- Added to app.js (module level, before DOMContentLoaded):
+  - `showLoading()` with JSDoc: sets #loading-section to display:flex, hides #result-section, disables #analyze-btn, changes btn text to 'Analiz ediliyor...'
+  - `hideLoading()` with JSDoc: sets #loading-section to display:none, re-enables #analyze-btn, restores btn text to '🔍 Analiz Et'
+- Updated analyzeBtn click handler: calls showLoading() before fetch, hideLoading() in finally block
+- Created tests/loading-test.js — 20 assertions covering HTML, CSS, JS; all passing
+- Committed: feat: US-007 - Loading animation during API call (c9d8c0b)
 - **Learnings:**
-  - Wrap FileReader in Promise for clean async/await in async functions
-  - Central `updateAnalyzeBtn()` called from all state-mutation points keeps button state consistent
-  - Test regex `[\s\S]{0,200}` safer than `[^}]*` for matching code across multi-line blocks with inner braces
-  - `anthropic-dangerous-direct-browser-access: true` header is mandatory for direct browser API calls
+  - showLoading/hideLoading defined at module level but use getElementById at call time — safe because DOMContentLoaded fires before user can click
+  - `style="display:none"` better than `hidden` attribute for sections toggled by JS via .style.display (avoids !important conflict)
+  - try/finally is the correct pattern to ensure hideLoading always runs regardless of API success/failure
+
+---
+
+## 2026-03-11 - US-008: Results card display with shoe recognition details
+- Rewrote `#result-section` in index.html:
+  - Changed from `hidden` attribute to `style="display:none"` for JS toggle compatibility
+  - New `.result-card` div with heading 'Analiz Sonuçları'
+  - 5 result rows with icons: 🏷️ Marka, 👟 Model, 🎨 Renk, 📋 Tip, 💰 Tahmini Fiyat Aralığı
+  - New IDs: `result-marka`, `result-model`, `result-renk`, `result-tip`, `result-fiyatAraligi`
+  - 'Yeni Analiz' button (`id="new-analysis-btn"`) at bottom
+  - Kept `#error-box` and `#error-message` inside for API error display
+  - Removed old `#loading-indicator`, `#result-card`, `#result-list` (replaced by new structure)
+- Added `displayResults(data)` to app.js (module level, before DOMContentLoaded):
+  - JSDoc with @param annotation
+  - Populates all 5 fields via getElementById at call time
+  - Sets `resultSection.style.display = 'block'`
+  - Calls `resultSection.scrollIntoView({ behavior: 'smooth' })`
+- Added `new-analysis-btn` handler inside DOMContentLoaded:
+  - Resets `selectedFile = null`
+  - Hides `#result-section`, `#preview-section`
+  - Clears preview image and file name
+  - Calls `updateAnalyzeBtn()`
+- Updated `showLoading()` to use `resultSection.style.display = 'none'` (was `resultSection.hidden = true`)
+- Removed `showResult()` (replaced by `displayResults()`)
+- Updated `showResultError()` to use `resultSection.style.display = 'block'` for consistency
+- Updated `analyzeBtn` click handler to call `displayResults(result)` on success
+- Added `.result-card` CSS in styles.css:
+  - `background-color: var(--color-surface)`, `border: 1px solid var(--color-border)`
+  - `border-top: 4px solid var(--color-accent)` — gold/amber accent top border
+  - `border-radius: 12px`, `padding: 24px`
+- Added `.result-row`, `.result-label` (muted color), `.result-value` (white, bold) CSS
+- Updated responsive section: replaced `#result-card` → `.result-card`, `#result-list li` → `.result-row` etc.
+- Created tests/results-test.js — 33 assertions covering HTML structure, JS functions, CSS rules; all passing
+- All prior tests still passing (smoke: 11, upload: 19, loading: 20)
+- Committed: feat: US-008 - Results card display with shoe recognition details (c82c707)
+- **Learnings:**
+  - When restructuring a section, check ALL app.js references to old IDs and update them
+  - `displayResults()` as a module-level function follows the same pattern as `showLoading()`/`hideLoading()`
+  - Using `.result-card` class instead of `#result-card` ID for the card styling keeps HTML semantically cleaner
+  - `scrollIntoView({ behavior: 'smooth' })` provides native smooth scroll without CSS dependency
 
 ---

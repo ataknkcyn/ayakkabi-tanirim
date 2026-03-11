@@ -58,6 +58,15 @@
       </div>
     </section>
 
+    <!-- Hata Bölümü (başlangıçta gizli, showError() ile açılır) -->
+    <section id="error-section" style="display:none">
+      <div class="error-card">
+        <button type="button" id="error-dismiss-btn" class="error-dismiss" onclick="hideError()" aria-label="Kapat">✕</button>
+        <span class="error-icon">⚠️</span>
+        <p id="error-message"></p>
+      </div>
+    </section>
+
     <!-- Yükleme Animasyonu Bölümü (API isteği sırasında görünür) -->
     <section id="loading-section" style="display:none">
       <div id="loading-spinner" class="spinner"></div>
@@ -103,12 +112,6 @@
 
         <!-- Yeni analiz: formu sıfırlar -->
         <button type="button" id="new-analysis-btn" class="btn-secondary">🔄 Yeni Analiz</button>
-      </div>
-
-      <!-- Hata Mesajı (API hatası durumunda gösterilir) -->
-      <div id="error-box" hidden>
-        <p id="error-message"></p>
-        <button id="error-reset-btn" class="btn-secondary">Geri Dön</button>
       </div>
 
     </section>
