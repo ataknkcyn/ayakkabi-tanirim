@@ -64,32 +64,53 @@
       <p id="loading-text">Ayakkabı analiz ediliyor...</p>
     </section>
 
-    <!-- Sonuç Bölümü -->
-    <section id="result-section" hidden>
-      <!-- Yükleme Animasyonu -->
-      <div id="loading-indicator" hidden>
-        <div class="spinner"></div>
-        <p>Analiz ediliyor…</p>
-      </div>
+    <!-- Sonuç Bölümü (başlangıçta gizli, displayResults() ile açılır) -->
+    <section id="result-section" style="display:none">
 
       <!-- Sonuç Kartı -->
-      <div id="result-card" hidden>
-        <h2>Tanıma Sonucu</h2>
-        <ul id="result-list">
-          <li><span class="label">Marka</span><span id="res-brand" class="value"></span></li>
-          <li><span class="label">Model</span><span id="res-model" class="value"></span></li>
-          <li><span class="label">Renk</span><span id="res-color" class="value"></span></li>
-          <li><span class="label">Tip</span><span id="res-type" class="value"></span></li>
-          <li><span class="label">Tahmini Fiyat</span><span id="res-price" class="value"></span></li>
-        </ul>
-        <button id="reset-btn" class="btn-secondary">Yeniden Dene</button>
+      <div class="result-card">
+        <h2>Analiz Sonuçları</h2>
+
+        <!-- Sonuç satırları: ikon + etiket + değer -->
+        <div class="result-rows">
+
+          <div class="result-row">
+            <span class="result-label">🏷️ Marka</span>
+            <span id="result-marka" class="result-value"></span>
+          </div>
+
+          <div class="result-row">
+            <span class="result-label">👟 Model</span>
+            <span id="result-model" class="result-value"></span>
+          </div>
+
+          <div class="result-row">
+            <span class="result-label">🎨 Renk</span>
+            <span id="result-renk" class="result-value"></span>
+          </div>
+
+          <div class="result-row">
+            <span class="result-label">📋 Tip</span>
+            <span id="result-tip" class="result-value"></span>
+          </div>
+
+          <div class="result-row">
+            <span class="result-label">💰 Tahmini Fiyat Aralığı</span>
+            <span id="result-fiyatAraligi" class="result-value"></span>
+          </div>
+
+        </div>
+
+        <!-- Yeni analiz: formu sıfırlar -->
+        <button type="button" id="new-analysis-btn" class="btn-secondary">🔄 Yeni Analiz</button>
       </div>
 
-      <!-- Hata Mesajı -->
+      <!-- Hata Mesajı (API hatası durumunda gösterilir) -->
       <div id="error-box" hidden>
         <p id="error-message"></p>
         <button id="error-reset-btn" class="btn-secondary">Geri Dön</button>
       </div>
+
     </section>
 
   </main>

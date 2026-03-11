@@ -157,7 +157,7 @@ function showLoading() {
   const analyzeBtn     = document.getElementById('analyze-btn');
 
   if (loadingSection) loadingSection.style.display = 'flex';
-  if (resultSection)  resultSection.hidden = true;
+  if (resultSection)  resultSection.style.display = 'none';
   if (analyzeBtn) {
     analyzeBtn.disabled    = true;
     analyzeBtn.textContent = 'Analiz ediliyor...';
@@ -178,6 +178,36 @@ function hideLoading() {
     analyzeBtn.disabled    = false;
     analyzeBtn.textContent = '🔍 Analiz Et';
   }
+}
+
+/* ============================================================
+   Sonuç Gösterimi — displayResults
+   ============================================================ */
+
+/**
+ * Ayakkabı tanıma sonuçlarını sonuç kartında görüntüler.
+ *
+ * analyzeShoe() fonksiyonundan dönen veriyi alıp ilgili HTML
+ * öğelerine yazar, #result-section'ı görünür yapar ve sayfayı
+ * smooth scroll ile sonuç kartına kaydırır.
+ *
+ * @param {{marka: string, model: string, renk: string, tip: string, fiyatAraligi: string}} data
+ *   analyzeShoe() fonksiyonundan dönen ayakkabı bilgileri nesnesi
+ */
+function displayResults(data) {
+  // Her alanı ilgili span'a yaz (boşsa 'Bilinmiyor' göster)
+  document.getElementById('result-marka').textContent      = data.marka      || 'Bilinmiyor';
+  document.getElementById('result-model').textContent      = data.model      || 'Bilinmiyor';
+  document.getElementById('result-renk').textContent       = data.renk       || 'Bilinmiyor';
+  document.getElementById('result-tip').textContent        = data.tip        || 'Bilinmiyor';
+  document.getElementById('result-fiyatAraligi').textContent = data.fiyatAraligi || 'Bilinmiyor';
+
+  // #result-section'ı göster (style.display ile — [hidden] attribute yerine)
+  const resultSection = document.getElementById('result-section');
+  resultSection.style.display = 'block';
+
+  // Sonuç kartına smooth scroll
+  resultSection.scrollIntoView({ behavior: 'smooth' });
 }
 
 /* ============================================================
@@ -250,13 +280,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const fileNameEl    = document.getElementById('file-name');
   const changeBtn     = document.getElementById('change-btn');
   const analyzeBtn    = document.getElementById('analyze-btn');
-  const errorBox      = document.getElementById('error-box');
-  const errorMsg      = document.getElementById('error-message');
-  const resultSection = document.getElementById('result-section');
-  const loadingEl     = document.getElementById('loading-indicator');
-  const resultCard    = document.getElementById('result-card');
-  const errorResetBtn = document.getElementById('error-reset-btn');
-  const resetBtn      = document.getElementById('reset-btn');
+  const errorBox        = document.getElementById('error-box');
+  const errorMsg        = document.getElementById('error-message');
+  const resultSection   = document.getElementById('result-section');
+  const errorResetBtn   = document.getElementById('error-reset-btn');
+  const newAnalysisBtn  = document.getElementById('new-analysis-btn');
 
   /**
    * Analiz Et butonunu etkinleştirme/devre dışı bırakma durumunu günceller.
@@ -345,29 +373,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /**
-   * Analiz sonuçlarını ekranda gösterir.
-   *
-   * @param {{marka: string, model: string, renk: string, tip: string, fiyatAraligi: string}} result
-   */
-  function showResult(result) {
-    document.getElementById('res-brand').textContent = result.marka;
-    document.getElementById('res-model').textContent = result.model;
-    document.getElementById('res-color').textContent = result.renk;
-    document.getElementById('res-type').textContent  = result.tip;
-    document.getElementById('res-price').textContent = result.fiyatAraligi;
-    loadingEl.hidden  = true;
-    resultCard.hidden = false;
-  }
-
-  /**
    * Hata mesajını sonuç bölümünde gösterir.
+   * #result-section'ı görünür yapar ve error-box'ı açar.
    *
    * @param {string} message - Türkçe hata mesajı
    */
   function showResultError(message) {
     errorMsg.textContent = message;
-    loadingEl.hidden = true;
-    errorBox.hidden  = false;
+    resultSection.style.display = 'block';
+    errorBox.hidden = false;
   }
 
   // --- Analiz Et butonu ---
@@ -376,18 +390,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const apiKey = (apiKeyInput.value || '').trim();
     if (!apiKey) return;
 
-    // Yükleme animasyonunu başlat
+    // Yükleme animasyonunu başlat (result-section gizlenir)
     showLoading();
 
-    // Sonuç bölümünü sıfırla
-    resultCard.hidden = true;
-    errorBox.hidden   = true;
-    loadingEl.hidden  = false;
-    resultSection.hidden = false;
+    // Hata kutusunu sıfırla
+    errorBox.hidden = true;
 
     try {
       const result = await analyzeShoe(selectedFile, apiKey);
-      showResult(result);
+      // Sonuçları göster (displayResults result-section'ı açar ve scroll yapar)
+      displayResults(result);
     } catch (err) {
       // Hata mesajını Türkçe göster
       const message = err.message || 'Bilinmeyen bir hata oluştu';
@@ -398,17 +410,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // --- Sıfırla / Geri Dön butonları ---
-  if (resetBtn) {
-    resetBtn.addEventListener('click', () => {
-      resultSection.hidden = true;
-      resultCard.hidden = true;
+  // --- Yeni Analiz butonu: formu tamamen sıfırla ---
+  if (newAnalysisBtn) {
+    newAnalysisBtn.addEventListener('click', () => {
+      // Seçili dosyayı temizle
+      selectedFile = null;
+      // Sonuç bölümünü gizle
+      resultSection.style.display = 'none';
+      // Hata kutusunu gizle
+      errorBox.hidden = true;
+      // Önizlemeyi gizle ve sıfırla
+      previewImg.src = '';
+      fileNameEl.textContent = '';
+      previewSec.hidden = true;
+      // Analiz butonunu güncelle
+      updateAnalyzeBtn();
     });
   }
 
+  // --- Geri Dön butonu (hata durumu) ---
   if (errorResetBtn) {
     errorResetBtn.addEventListener('click', () => {
-      resultSection.hidden = true;
+      resultSection.style.display = 'none';
       errorBox.hidden = true;
     });
   }
