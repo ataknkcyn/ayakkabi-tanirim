@@ -1,0 +1,54 @@
+# Progress Log
+Run: f52e0aa9-f573-4278-8f9b-5913a7c09720
+Task: Ayakkabi tanima one-page web uygulamasi olustur
+Started: 2026-03-11
+
+## Codebase Patterns
+- Pure HTML/CSS/Vanilla JS project — no build tool, no package.json, open index.html directly in browser
+- Tests use Node.js ESM (import/export), run with: node tests/<test-file>.js
+- Git commits: `git -c user.email="developer@openclaw" -c user.name="Developer" commit -m "..."`
+- No .env or secrets — API key stored in browser localStorage only
+- Test pattern: mock browser APIs (localStorage, DOM) via pure JS objects in Node; also do source-text assertions on HTML/JS files
+- CSS classes for new UI rows: use BEM-ish flat naming (.api-key-row, .btn-icon, .btn-save, .api-key-saved)
+- `[hidden]` CSS utility is in styles.css — use `element.hidden = true/false` in JS, never touch display directly
+- showSavedMessage() uses a timer stored on the function itself (showSavedMessage._timer) to cancel previous timers — useful pattern for debounced UI feedback
+
+---
+
+## 2026-03-11 - US-001: Project setup and HTML skeleton
+- Initialized git repo at /Users/ataknkcyn/Desktop/ayakkabi-tanirim
+- Created branch: feature/ayakkabi-tanirim-app
+- Created index.html with: DOCTYPE, lang="tr", charset UTF-8, viewport meta, title, <header>, <main> (#upload-section, #result-section), <footer>
+- Created placeholder styles.css and app.js
+- Created README.md with usage instructions
+- Created tests/smoke-test.js — 11 structural assertions, all passing
+- Created .gitignore (.DS_Store, *.log)
+- Committed: feat: US-001 - Project setup and HTML skeleton (5ba26b6)
+- **Learnings:** Project is purely static — no Node modules, no build step, tests are standalone Node ESM scripts
+
+---
+
+## 2026-03-11 - US-003: API key input with localStorage persistence
+- Updated index.html: replaced basic #api-key-section with a full row (.api-key-row) containing:
+  - input[type=password][id=api-key-input] with Turkish placeholder "Claude API anahtarınızı girin"
+  - #api-key-toggle button (Göster/Gizle)
+  - #api-key-save button (Kaydet)
+  - #api-key-saved-msg paragraph (hidden by default, Turkish confirmation text)
+- Updated app.js: replaced placeholder with full implementation:
+  - saveApiKey(apiKey) with JSDoc — trims input, calls localStorage.setItem, returns bool
+  - loadApiKey() with JSDoc — calls localStorage.getItem, returns string or null
+  - DOMContentLoaded listener: populates input from localStorage, wires up toggle + save buttons
+  - showSavedMessage() internal helper — shows confirmation for 3 seconds
+- Updated styles.css: added styles for .api-key-row, .btn-icon, .btn-save, .api-key-saved
+- Created tests/api-key-test.js — 22 assertions covering:
+  - saveApiKey with valid key, empty key, whitespace-only, trimming
+  - loadApiKey when nothing stored
+  - Source text assertions on app.js (functions defined, JSDoc, localStorage calls)
+  - Source text assertions on index.html (UI elements, placeholder text)
+- All 22 new tests pass; all prior tests (smoke-test: 11, css-test: 23) still pass
+- Committed: feat: US-003 - API key input with localStorage persistence (a86054a)
+- **Learnings:**
+  - No jsdom needed — pure string assertions on source files + mock localStorage objects work cleanly in Node ESM
+  - Timer pattern `fn._timer = setTimeout(...)` avoids needing a separate module-level variable for debounced feedback messages
+
+---
