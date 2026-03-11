@@ -24,6 +24,9 @@ Started: 2026-03-11
 - app.js is a plain (non-module) script → module-level functions are on `window`, so HTML onclick="hideError()" works
 - Turkish error messages defined as module-level constants (ERR_NO_FILE, ERR_NO_API_KEY, etc.) for testability
 - Dismiss buttons in error sections use `onclick="hideError()"` attribute (works since app.js is non-module global script)
+- Collapsible HTML sections: use native `<details>`/`<summary>` pattern — no JS needed, CSS `[open]` selector for arrow rotation
+- Mobile responsive: add `min-height` + `display:flex; align-items:center` to drop zone, `padding: 16px` to result card, `width:100%` to all button classes
+- Integration test pattern: single test file reads all source files as strings, asserts structural requirements across HTML/JS/CSS in one pass
 
 ---
 
@@ -87,8 +90,6 @@ Started: 2026-03-11
   - 5 result rows with icons: 🏷️ Marka, 👟 Model, 🎨 Renk, 📋 Tip, 💰 Tahmini Fiyat Aralığı
   - New IDs: `result-marka`, `result-model`, `result-renk`, `result-tip`, `result-fiyatAraligi`
   - 'Yeni Analiz' button (`id="new-analysis-btn"`) at bottom
-  - Kept `#error-box` and `#error-message` inside for API error display
-  - Removed old `#loading-indicator`, `#result-card`, `#result-list` (replaced by new structure)
 - Added `displayResults(data)` to app.js (module level, before DOMContentLoaded)
 - Created tests/results-test.js — 33 assertions; all passing
 - Committed: feat: US-008 - Results card display with shoe recognition details (c82c707)
@@ -96,35 +97,49 @@ Started: 2026-03-11
 ---
 
 ## 2026-03-11 - US-009: Turkish error handling for all failure cases
-- Added `<section id="error-section" style="display:none">` to index.html (before #loading-section):
-  - `.error-card` div with: dismiss button (`onclick="hideError()"` using global fn), ⚠️ icon, `<p id="error-message">`
-  - Removed old `#error-box` and `#error-message` from inside `#result-section` (avoided duplicate IDs)
-- Added CSS for `.error-card` in styles.css:
-  - `border: 2px solid var(--color-error)` — red border via CSS variable
-  - `background-color: rgba(239, 68, 68, 0.08)` — red-tinted background
-  - `border-radius: var(--radius-lg)`, flex column centered
-  - `.error-dismiss` button: positioned `absolute` top-right, transparent background
-  - `.error-icon` span for large ⚠️ icon
-- Added to app.js (module level, before DOMContentLoaded):
+- Added `<section id="error-section" style="display:none">` to index.html (before #loading-section)
+- Added CSS for `.error-card` in styles.css: red border, red-tinted background, dismiss button
+- Added to app.js (module level):
   - 7 Turkish error message constants: ERR_NO_FILE, ERR_NO_API_KEY, ERR_UNAUTHORIZED, ERR_RATE_LIMIT, ERR_SERVER, ERR_NETWORK, ERR_JSON
-  - `showError(message)` with JSDoc: sets #error-message.textContent, sets #error-section display:flex, scrolls into view
-  - `hideError()` with JSDoc: sets #error-section display:none
-- Updated `analyzeShoe()` in app.js:
-  - HTTP errors now throw `const apiErr = new Error(...); apiErr.status = response.status; throw apiErr`
-  - JSON parse errors throw with `err.isJsonError = true` flag
-- Updated `analyzeBtn` click handler:
-  - Early return with `showError(ERR_NO_FILE)` if no file selected
-  - Early return with `showError(ERR_NO_API_KEY)` if no API key
-  - Catch block maps: 401 → ERR_UNAUTHORIZED, 429 → ERR_RATE_LIMIT, ≥500 → ERR_SERVER, TypeError → ERR_NETWORK, isJsonError/SyntaxError → ERR_JSON
-- Removed stale `showError` (local DOMContentLoaded scope) and `showResultError` functions
-- Updated `newAnalysisBtn` handler to call `hideError()` instead of `errorBox.hidden = true`
-- Created tests/error-test.js — 27 assertions covering HTML structure, CSS, JS functions, all 7 Turkish strings, HTTP code mapping, error flow; all passing
-- All prior tests still passing (smoke: 11, upload: 19, loading: 20)
+  - `showError(message)` and `hideError()` with JSDoc
+- Updated catch block in analyzeBtn handler to map HTTP status codes to Turkish messages
+- Created tests/error-test.js — 27 assertions; all passing
 - Committed: feat: US-009 - Turkish error handling for all failure cases (418397c)
 - **Learnings:**
   - app.js is loaded as `<script src="app.js">` (non-module), so module-level functions are global — `onclick="hideError()"` in HTML works
   - Custom error properties (`err.status`, `err.isJsonError`) are cleaner than string matching for catch block routing
-  - Turkish string constants at module level make test assertions simple: `appJs.includes(ERR_UNAUTHORIZED_TEXT)`
-  - Removing duplicate `#error-message` IDs (old `#error-box` inside result-section had same ID) prevents querySelector ambiguity
+
+---
+
+## 2026-03-11 - US-010: Mobile responsive polish, code comments, and final integration
+- Updated styles.css @media (max-width: 640px) block:
+  - `#drop-zone`: added `min-height: 150px`, `display: flex`, `align-items: center`, `justify-content: center`
+  - `.result-card`: changed padding to `16px`
+  - `.btn-upload`, `.btn-primary`, `.btn-secondary`, `.btn-save`: all set to `width: 100%` on mobile
+  - `.preview-actions`: `flex-direction: column` for stacked buttons on mobile
+  - `.api-key-row`: `flex-wrap: wrap` with `flex: 1 1 100%` on input
+- Added `#how-to-section` with `<details id="how-to-details">` collapsible to index.html (before upload-section):
+  - Turkish summary: "❓ Nasıl Kullanılır?"
+  - 6 numbered `<li>` steps in Turkish covering API key → file select → preview → analyze → results → new analysis
+- Added CSS for `#how-to-details` / `#how-to-section`:
+  - `<summary>` with custom `▶` arrow via `::before`, rotates 90° when `[open]`
+  - `.how-to-content ol` with flex column gap and muted text
+- All app.js functions already had complete Turkish JSDoc comments (no changes needed)
+- Created tests/integration-test.js — 49 assertions covering:
+  - All 5 required section IDs in index.html
+  - "Nasıl Kullanılır?" collapsible section structure
+  - All 9 required functions in app.js
+  - Turkish JSDoc presence for 7 key functions
+  - All 10 CSS variables
+  - @keyframes spin and pulse
+  - Mobile @media block with min-height, padding, button width, typography
+  - General checks: lang="tr", model name, CORS header, localStorage, try/finally
+- All tests pass: integration-test 49/49, + all 9 individual tests
+- Committed: feat: US-010 - Mobile responsive polish, code comments, and final integration (efdb1d7)
+- **Learnings:**
+  - `<details>`/`<summary>` native HTML is zero-JS collapsible; `[open]` attribute selector enables CSS-only open state styling
+  - Integration test as single file covering HTML+JS+CSS structural checks is efficient for static projects
+  - Mobile drop zone needs both `min-height` AND `display:flex` + `align-items:center` to look centered at min-height
+  - Naming CSS section comments with sequential numbers (18, 19...) helps keep track of additions
 
 ---
