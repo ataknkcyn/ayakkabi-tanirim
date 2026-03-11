@@ -17,9 +17,13 @@ Started: 2026-03-11
 - Loading state functions (showLoading/hideLoading) defined at module level (before DOMContentLoaded) so they can reference DOM via getElementById at call time — they do NOT cache DOM refs at module scope
 - Use `style="display:none"` (inline style) for initially-hidden sections that JS will toggle via .style.display = 'flex' — avoids [hidden] attribute conflict since [hidden] uses display:none !important
 - try/finally pattern for API calls: showLoading() before fetch, hideLoading() in finally block
-- Module-level helper functions (displayResults, showLoading, hideLoading) use getElementById at call time, NOT cached at module scope — safe because DOMContentLoaded fires before user interaction
+- Module-level helper functions (displayResults, showLoading, hideLoading, showError, hideError) use getElementById at call time, NOT cached at module scope
 - Result card uses `.result-card` class (not ID) so it can be reused; section uses `#result-section` ID for JS targeting
-- `style.display` toggling (not `hidden` attribute) for sections controlled by displayResults/showLoading — consistent approach throughout
+- `style.display` toggling (not `hidden` attribute) for sections controlled by JS — consistent approach throughout
+- Error handling pattern: throw custom errors with `err.status = response.status` and `err.isJsonError = true` flags so catch blocks can map to Turkish messages without string matching
+- app.js is a plain (non-module) script → module-level functions are on `window`, so HTML onclick="hideError()" works
+- Turkish error messages defined as module-level constants (ERR_NO_FILE, ERR_NO_API_KEY, etc.) for testability
+- Dismiss buttons in error sections use `onclick="hideError()"` attribute (works since app.js is non-module global script)
 
 ---
 
@@ -85,33 +89,42 @@ Started: 2026-03-11
   - 'Yeni Analiz' button (`id="new-analysis-btn"`) at bottom
   - Kept `#error-box` and `#error-message` inside for API error display
   - Removed old `#loading-indicator`, `#result-card`, `#result-list` (replaced by new structure)
-- Added `displayResults(data)` to app.js (module level, before DOMContentLoaded):
-  - JSDoc with @param annotation
-  - Populates all 5 fields via getElementById at call time
-  - Sets `resultSection.style.display = 'block'`
-  - Calls `resultSection.scrollIntoView({ behavior: 'smooth' })`
-- Added `new-analysis-btn` handler inside DOMContentLoaded:
-  - Resets `selectedFile = null`
-  - Hides `#result-section`, `#preview-section`
-  - Clears preview image and file name
-  - Calls `updateAnalyzeBtn()`
-- Updated `showLoading()` to use `resultSection.style.display = 'none'` (was `resultSection.hidden = true`)
-- Removed `showResult()` (replaced by `displayResults()`)
-- Updated `showResultError()` to use `resultSection.style.display = 'block'` for consistency
-- Updated `analyzeBtn` click handler to call `displayResults(result)` on success
-- Added `.result-card` CSS in styles.css:
-  - `background-color: var(--color-surface)`, `border: 1px solid var(--color-border)`
-  - `border-top: 4px solid var(--color-accent)` — gold/amber accent top border
-  - `border-radius: 12px`, `padding: 24px`
-- Added `.result-row`, `.result-label` (muted color), `.result-value` (white, bold) CSS
-- Updated responsive section: replaced `#result-card` → `.result-card`, `#result-list li` → `.result-row` etc.
-- Created tests/results-test.js — 33 assertions covering HTML structure, JS functions, CSS rules; all passing
-- All prior tests still passing (smoke: 11, upload: 19, loading: 20)
+- Added `displayResults(data)` to app.js (module level, before DOMContentLoaded)
+- Created tests/results-test.js — 33 assertions; all passing
 - Committed: feat: US-008 - Results card display with shoe recognition details (c82c707)
+
+---
+
+## 2026-03-11 - US-009: Turkish error handling for all failure cases
+- Added `<section id="error-section" style="display:none">` to index.html (before #loading-section):
+  - `.error-card` div with: dismiss button (`onclick="hideError()"` using global fn), ⚠️ icon, `<p id="error-message">`
+  - Removed old `#error-box` and `#error-message` from inside `#result-section` (avoided duplicate IDs)
+- Added CSS for `.error-card` in styles.css:
+  - `border: 2px solid var(--color-error)` — red border via CSS variable
+  - `background-color: rgba(239, 68, 68, 0.08)` — red-tinted background
+  - `border-radius: var(--radius-lg)`, flex column centered
+  - `.error-dismiss` button: positioned `absolute` top-right, transparent background
+  - `.error-icon` span for large ⚠️ icon
+- Added to app.js (module level, before DOMContentLoaded):
+  - 7 Turkish error message constants: ERR_NO_FILE, ERR_NO_API_KEY, ERR_UNAUTHORIZED, ERR_RATE_LIMIT, ERR_SERVER, ERR_NETWORK, ERR_JSON
+  - `showError(message)` with JSDoc: sets #error-message.textContent, sets #error-section display:flex, scrolls into view
+  - `hideError()` with JSDoc: sets #error-section display:none
+- Updated `analyzeShoe()` in app.js:
+  - HTTP errors now throw `const apiErr = new Error(...); apiErr.status = response.status; throw apiErr`
+  - JSON parse errors throw with `err.isJsonError = true` flag
+- Updated `analyzeBtn` click handler:
+  - Early return with `showError(ERR_NO_FILE)` if no file selected
+  - Early return with `showError(ERR_NO_API_KEY)` if no API key
+  - Catch block maps: 401 → ERR_UNAUTHORIZED, 429 → ERR_RATE_LIMIT, ≥500 → ERR_SERVER, TypeError → ERR_NETWORK, isJsonError/SyntaxError → ERR_JSON
+- Removed stale `showError` (local DOMContentLoaded scope) and `showResultError` functions
+- Updated `newAnalysisBtn` handler to call `hideError()` instead of `errorBox.hidden = true`
+- Created tests/error-test.js — 27 assertions covering HTML structure, CSS, JS functions, all 7 Turkish strings, HTTP code mapping, error flow; all passing
+- All prior tests still passing (smoke: 11, upload: 19, loading: 20)
+- Committed: feat: US-009 - Turkish error handling for all failure cases (418397c)
 - **Learnings:**
-  - When restructuring a section, check ALL app.js references to old IDs and update them
-  - `displayResults()` as a module-level function follows the same pattern as `showLoading()`/`hideLoading()`
-  - Using `.result-card` class instead of `#result-card` ID for the card styling keeps HTML semantically cleaner
-  - `scrollIntoView({ behavior: 'smooth' })` provides native smooth scroll without CSS dependency
+  - app.js is loaded as `<script src="app.js">` (non-module), so module-level functions are global — `onclick="hideError()"` in HTML works
+  - Custom error properties (`err.status`, `err.isJsonError`) are cleaner than string matching for catch block routing
+  - Turkish string constants at module level make test assertions simple: `appJs.includes(ERR_UNAUTHORIZED_TEXT)`
+  - Removing duplicate `#error-message` IDs (old `#error-box` inside result-section had same ID) prevents querySelector ambiguity
 
 ---
