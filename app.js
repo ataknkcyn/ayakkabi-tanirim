@@ -142,6 +142,45 @@ Sadece JSON döndür, başka metin ekleme.`,
 }
 
 /* ============================================================
+   Yükleme Animasyonu — showLoading / hideLoading
+   ============================================================ */
+
+/**
+ * API isteği başlamadan önce yükleme animasyonunu gösterir.
+ * - #loading-section'ı display:flex yapar
+ * - #result-section'ı gizler
+ * - #analyze-btn'i devre dışı bırakır ve metnini günceller
+ */
+function showLoading() {
+  const loadingSection = document.getElementById('loading-section');
+  const resultSection  = document.getElementById('result-section');
+  const analyzeBtn     = document.getElementById('analyze-btn');
+
+  if (loadingSection) loadingSection.style.display = 'flex';
+  if (resultSection)  resultSection.hidden = true;
+  if (analyzeBtn) {
+    analyzeBtn.disabled    = true;
+    analyzeBtn.textContent = 'Analiz ediliyor...';
+  }
+}
+
+/**
+ * API isteği tamamlandıktan sonra yükleme animasyonunu gizler.
+ * - #loading-section'ı display:none yapar
+ * - #analyze-btn'i yeniden etkinleştirir ve metnini geri yükler
+ */
+function hideLoading() {
+  const loadingSection = document.getElementById('loading-section');
+  const analyzeBtn     = document.getElementById('analyze-btn');
+
+  if (loadingSection) loadingSection.style.display = 'none';
+  if (analyzeBtn) {
+    analyzeBtn.disabled    = false;
+    analyzeBtn.textContent = '🔍 Analiz Et';
+  }
+}
+
+/* ============================================================
    Seçilen Dosya — Modül Düzeyinde Durum
    ============================================================ */
 
@@ -337,7 +376,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const apiKey = (apiKeyInput.value || '').trim();
     if (!apiKey) return;
 
-    // Sonuç bölümünü hazırla: yüklenme göster
+    // Yükleme animasyonunu başlat
+    showLoading();
+
+    // Sonuç bölümünü sıfırla
     resultCard.hidden = true;
     errorBox.hidden   = true;
     loadingEl.hidden  = false;
@@ -350,6 +392,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // Hata mesajını Türkçe göster
       const message = err.message || 'Bilinmeyen bir hata oluştu';
       showResultError('Analiz başarısız: ' + message);
+    } finally {
+      // Her durumda yükleme animasyonunu gizle
+      hideLoading();
     }
   });
 

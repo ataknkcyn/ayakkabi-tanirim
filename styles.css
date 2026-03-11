@@ -450,8 +450,31 @@ section {
   to { transform: rotate(360deg); }
 }
 
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
 /* ------------------------------------------------------------
-   13. Sonuç Kartı
+   13. Yükleme Bölümü (#loading-section)
+   ------------------------------------------------------------ */
+#loading-section {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+  min-height: 40vh;
+  text-align: center;
+}
+
+#loading-text {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+/* ------------------------------------------------------------
+   14. Sonuç Kartı
    ------------------------------------------------------------ */
 #result-card {
   background-color: var(--color-surface);
@@ -504,7 +527,7 @@ section {
 }
 
 /* ------------------------------------------------------------
-   14. Hata Kutusu
+   15. Hata Kutusu
    ------------------------------------------------------------ */
 #error-box {
   background-color: rgba(239, 68, 68, 0.1);
@@ -524,7 +547,7 @@ section {
 }
 
 /* ------------------------------------------------------------
-   15. Footer
+   16. Footer
    ------------------------------------------------------------ */
 footer {
   border-top: 1px solid var(--color-border);
@@ -539,14 +562,14 @@ footer p {
 }
 
 /* ------------------------------------------------------------
-   16. Utility: hidden niteliği
+   17. Utility: hidden niteliği
    ------------------------------------------------------------ */
 [hidden] {
   display: none !important;
 }
 
 /* ------------------------------------------------------------
-   17. Responsive — Mobil (max-width: 640px)
+   18. Responsive — Mobil (max-width: 640px)
    ------------------------------------------------------------ */
 @media (max-width: 640px) {
   :root {
